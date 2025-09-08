@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Runner</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea { width: 100%; height: 150px; font-family: monospace; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+    .correct { background-color: #d4edda; }
+    .wrong { background-color: #f8d7da; }
+    .error { background-color: #fff3cd; }
+    #traceback { white-space: pre-wrap; background: #f2f2f2; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; display: none; }
+</style>
+</head>
+<body>
+
+<h1>Code Runner</h1>
+
+<label for="problem">Select Problem:</label>
+<select id="problem"></select>
+
+<h3>Your Code:</h3>
+<textarea id="code"></textarea>
+
+<button id="runButton">Run Code</button>
+
+<div id="traceback"></div>
+
+<h3>Results:</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Input</th>
+            <th>Expected</th>
+            <th>Output</th>
+            <th>stdout</th>
+            <th>Verdict</th>
+            <th>Error</th>
+        </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+</table>
+
+<script>
+const problemSelect = document.getElementById("problem");
+const codeInput = document.getElementById("code");
+const runButton = document.getElementById("runButton");
+const resultsBody = document.getElementById("resultsBody");
+const tracebackDiv = document.getElementById("traceback");
+
+// Load problems from backend
+async function loadProblems() {
+    const res = await fetch("/problems");
+    const problems = await res.json();
+    problemSelect.innerHTML = "";
+    problems.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.title || `Problem ${p.id}`;
+        problemSelect.appendChild(opt);
+    });
+}
+loadProblems();
+
+// Run code
+runButton.addEventListener("click", async () => {
+    resultsBody.innerHTML = "";
+    tracebackDiv.style.display = "none";
+    tracebackDiv.textContent = "";
+
+    const problem_id = problemSelect.value;
+    const code = codeInput.value.trim();
+
+    if (!problem_id) { alert("Please select a problem."); return; }
+    if (!code) { alert("Please enter your code."); return; }
+
+    try {
+        const response = await fetch("/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ problem_id, code })
+        });
+
+        const results = await response.json();
+
+        // Show traceback/errors if returned
+        if (results.error) {
+            tracebackDiv.style.display = "block";
+            tracebackDiv.textContent = results.traceback || results.error;
+            return;
+        }
+
+        // Populate results table
+        results.forEach(r => {
+            const row = document.createElement("tr");
+            if (r.verdict === "Correct!") row.className = "correct";
+            else if (r.verdict === "Wrong!") row.className = "wrong";
+            else row.className = "error";
+
+            row.innerHTML = `
+                <td>${JSON.stringify(r.input)}</td>
+                <td>${r.expected}</td>
+                <td>${r.output}</td>
+                <td>${r.printed || ""}</td>
+                <td>${r.verdict}</td>
+                <td>${r.error || ""}</td>
+            `;
+            resultsBody.appendChild(row);
+        });
+
+    } catch (err) {
+        tracebackDiv.style.display = "block";
+        tracebackDiv.textContent = "Failed to run code: " + err;
+    }
+});
+</script>
+
+</body>
+</html>
