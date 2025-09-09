@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Submissions{% endblock %}
+
+{% block content %}
+<h2>Recent Submissions</h2>
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Problem ID</th>
+        <th>User</th>
+        <th>Verdict</th>
+        <th>Created At</th>
+    </tr>
+    {% for s in submissions %}
+    <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.problem_id }}</td>
+        <td>{{ s.user }}</td>
+        <td>{{ s.verdict }}</td>
+        <td>{{ s.created_at }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

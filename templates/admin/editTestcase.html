@@ -1,0 +1,16 @@
+{% extends "admin/admin.html" %}
+{% block title %}Test Case{% endblock %}
+
+{% block content %}
+<h2>Test Cases</h2>
+  <form method="POST">
+    <input type="hidden" name="problem_id" value="{{ testcase['problem_id'] }}">
+    <label>Input:</label><br>
+    <textarea name="input">{{ testcase['input'] }}</textarea><br>
+    <label>Expected Output:</label><br>
+    <textarea name="expected_output">{{ testcase['expected'] }}</textarea><br><br>
+    <button type="submit">Save</button>
+  </form>
+</body>
+
+{% endblock %}

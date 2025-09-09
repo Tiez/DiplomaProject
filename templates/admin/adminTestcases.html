@@ -1,0 +1,37 @@
+{% extends "admin/admin.html"%}
+{% block title %} Test cases {% endblock %}
+
+{% block content %}
+<h1>Testcases for Problem: {{ problem['title'] }}</h1>
+<h1>ID: {{problem['id']}}</h1>
+
+    <h2>Add New Testcase</h2>
+    <form method="post" action="{{ url_for('add_testcase', problem_id=problem['id']) }}">
+        <label>Input:</label><br>
+        <input type="text" name="input_data" required><br>
+        <label>Expected Output:</label><br>
+        <input type="text" name="expected_output" required><br>
+        <button type="submit">Add Testcase</button>
+    </form>
+
+    <h2>Existing Testcases</h2>
+    <ul>
+        {% for tc in testcases %}
+        <li>
+            <form method="post" action="{{ url_for('edit_testcase', problem_id=problem['id'], testcase_id=tc['id']) }}">
+                <input type="text" name="input_data" value="{{ tc['input'] }}" required >
+                <input type="text" name="expected_output" value="{{ tc['expected'] }}" required>
+                <button type="submit">Update</button>
+            </form>
+
+            <form method="post" action="{{ url_for('delete_testcase', problem_id=problem['id'], testcase_id=tc['id']) }}" style="display:inline;">
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+        {% else %}
+        <li>No testcases yet.</li>
+        {% endfor %}
+    </ul>
+
+    <p><a href="{{ url_for('get_problems') }}">Back to Problems</a></p>
+{% endblock %}

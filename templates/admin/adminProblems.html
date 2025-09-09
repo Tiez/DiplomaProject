@@ -1,0 +1,73 @@
+{% extends "admin/admin.html" %}
+{% block title %}Problems{% endblock %}
+
+{% block content %}
+<h2>Problems</h2>
+
+{% if add or edit%}
+<form method="POST">
+    <input type="text" name="title" placeholder="Problem Title" required><br>
+    <textarea name="description" placeholder="Description" rows="4" cols="50" required></textarea><br>
+    {% if add %}
+	<button type="submit">Add Problem</button>
+	
+    {% else %}
+        <button type="submit">Edit Problem</button><br>
+	
+    {% endif %}
+</form>
+
+
+
+
+
+{% endif%}
+
+
+{% if not add and not edit%}
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Title</th>
+
+        <th>Description</th>
+        <th>Actions</th>
+    </tr>
+    {% for p in problems %}
+    <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ p.title }}</td>
+        <td>{{ p.description }}</td>
+        <td>
+            <a href="{{ url_for('delete_problem', id=p.id) }}">Delete</a>
+	    <a href="{{url_for('edit_problem', id=p.id) }}">Edit</a>
+        </td>
+    </tr>
+    {% endfor %}
+
+<a href="{{ url_for('add_problem') }}">Add New Problem</a>
+{% endif %}
+
+<h1>Problem Testcases</h1>
+
+</table>
+
+
+
+
+<table border="1">
+<tr>
+ <th>ID</th>
+ <th>Input</th>
+ <th>Output</th>
+</tr>
+ {% for t in testcases %}
+<tr> 
+{{testcases[0]}}
+<td>{{t.id}}</td>
+ <td>{{t.input}}</td>
+ <td>{{t.expected}}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

@@ -3,7 +3,8 @@ import sqlite3
 import importlib.util
 import sys
 import io
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for
+import psutil
 
 app = Flask(__name__)
 SANDBOX_DIR = os.path.expanduser("~/sandbox")
@@ -21,6 +22,80 @@ def get_db_connection():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+# Admin Page Problems
+@app.route("/admin/problems")
+def adminProblem():
+    conn = get_db_connection()
+    problems = conn.execute('SELECT * FROM problems').fetchall()
+    conn.close()
+    return render_template("admin/adminProblems.html", problems=problems)
+
+
+# admin add problem
+@app.route('/admin/problems/add', methods=['GET', 'POST'])
+def add_problem():
+    if request.method == 'POST':
+        title = request.form['title']
+        description = request.form['description']
+        conn = get_db_connection()
+        conn.execute('INSERT INTO problems (title, description) VALUES (?, ?)',
+                     (title, description))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('adminProblem'))
+    return render_template('admin/adminProblems.html', problems=[], add=True)
+
+# admin edit problem
+@app.route('/admin/problems/edit/<int:id>', methods=["GET", "POST"])
+def edit_problem(id):
+
+    conn = get_db_connection()
+    problems = [dict(row) for row in conn.execute('SELECT * FROM problems WHERE id = ?', (id,)).fetchall()]
+    testcases = [dict(row) for row in conn.execute('SELECT * FROM test_cases WHERE problem_id = ?', (id,)).fetchall()]
+
+    if request.method == "POST":
+
+
+         for problem in problems:
+             if problem['id'] == id:
+
+                 title = request.form['title']
+                 description = request.form['description']
+                 conn.execute('UPDATE problems SET title = ?, description = ? WHERE id = ?', ( title, description, id))
+
+                 conn.commit()
+                 conn.close()
+                 return(redirect(url_for('adminProblem')))
+                 break
+    print(testcases)
+    return render_template('admin/adminProblems.html',testcases=testcases, edit=True)
+
+# admin delete problem
+@app.route('/admin/problems/delete/<int:id>')
+def delete_problem(id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM problems WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('adminProblem'))
+
+# admin submission
+@app.route('/admin/submissions')
+def adminSubmissions():
+    conn = get_db_connection()
+    submissions = conn.execute('SELECT * FROM submissions ORDER BY created_at DESC').fetchall()
+    conn.close()
+    return render_template('admin/adminSub.html', submissions=submissions)
+
+
+# admin system monitoring
+@app.route('/admin/system')
+def adminSystem():
+    cpu = psutil.cpu_percent(interval=0.5)
+    mem = psutil.virtual_memory().percent
+    return render_template('admin/adminMonitoring.html', cpu=cpu, mem=mem)
+
 
 # Get all problems
 @app.route("/problems")
@@ -41,6 +116,68 @@ def get_problem(id):
         "problem": dict(problem),
         "test_cases": [dict(tc) for tc in test_cases]
     })
+
+
+# --- List testcases for a problem ---
+@app.route("/admin/problem/<int:problem_id>/testcases")
+def admin_testcases(problem_id):
+    conn = get_db_connection()
+    conn.commit()
+    problem = conn.execute("SELECT * FROM problems WHERE id = ?", (problem_id,)).fetchone()
+    testcases = conn.execute("SELECT * FROM test_cases WHERE problem_id = ?", (problem_id,)).fetchall()
+
+    print(problem)
+    conn.close()
+
+    if problem is None:
+        print(testcases)
+        return f"⚠️ Problem with id {problem_id} not found", 404
+
+    return render_template("admin/adminTestcases.html", problem=problem, testcases=testcases)
+
+# --- Add testcase ---
+@app.route("/admin/problem/<int:problem_id>/testcases/add", methods=["POST"])
+def add_testcase(problem_id):
+    input_data = request.form["input_data"]
+    expected_output = request.form["expected_output"]
+
+    conn = get_db_connection()
+    conn.execute(
+        "INSERT INTO test_cases (problem_id, input, expected) VALUES (?, ?, ?)",
+        (problem_id, input_data, expected_output)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_testcases", problem_id=problem_id))
+
+# --- Edit testcase ---
+@app.route("/admin/problem/<int:problem_id>/testcases/<int:testcase_id>/edit", methods=["POST"])
+def edit_testcase(problem_id, testcase_id):
+    input_data = request.form["input_data"]
+    expected_output = request.form["expected_output"]
+
+    conn = get_db_connection()
+    conn.execute(
+        "UPDATE test_cases SET input = ?, expected = ? WHERE id = ?",
+        (input_data, expected_output, testcase_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_testcases", problem_id=problem_id))
+
+# --- Delete testcase ---
+@app.route("/admin/problem/<int:problem_id>/testcases/<int:testcase_id>/delete", methods=["POST"])
+def delete_testcase(problem_id, testcase_id):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM test_cases WHERE id = ?", (testcase_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin_testcases", problem_id=problem_id))
+
+
+
 
 # Run user code
 @app.route("/run", methods=["POST"])
@@ -114,4 +251,4 @@ def run_code():
     return jsonify(results)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
