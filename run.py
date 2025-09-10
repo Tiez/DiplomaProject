@@ -207,21 +207,21 @@ DOCKER_IMAGE = "python-sandbox"       # Docker image name you built
 
 @app.route("/run", methods=["POST"])
 def run_code():
-    import subprocess, json, time, os
+    import subprocess, json, os, time
 
     data = request.get_json()
     if not data or "code" not in data or "problem_id" not in data:
         return jsonify({"error": "Missing key 'code' or 'problem_id'"}), 400
 
-    code = f"""
-import sys
-import json
-import io
-import contextlib
+    user_code = data["code"]
+    problem_id = data["problem_id"]
 
-{data['code']}
+    # Wrap user code to catch exceptions and always output JSON
+    wrapped_code = f"""
+{user_code}
 
 if __name__ == "__main__":
+    import sys, json, io, contextlib
     try:
         args = json.loads(sys.argv[1])
         with io.StringIO() as buf, contextlib.redirect_stdout(buf):
@@ -232,10 +232,11 @@ if __name__ == "__main__":
         print(json.dumps({{"error": str(e)}}))
 """
 
-    problem_id = data["problem_id"]
+    # Save wrapped code to sandbox folder
+    SANDBOX_DIR = "/home/lenovo/sandbox"
     file_path = os.path.join(SANDBOX_DIR, "temp.py")
     with open(file_path, "w") as f:
-        f.write(code)
+        f.write(wrapped_code)
 
     # Fetch test cases from DB
     conn = get_db_connection()
@@ -249,7 +250,6 @@ if __name__ == "__main__":
     for case in test_cases:
         try:
             args = json.loads(case["input"])
-            expected_value = json.loads(case["expected"])
 
             docker_cmd = [
                 "docker", "run", "--rm",
@@ -274,21 +274,10 @@ if __name__ == "__main__":
             end_time = time.perf_counter()
             runtime = round((end_time - start_time) * 1000)
 
-            # --- Fix for syntax/runtime errors ---
-            if completed.stderr.strip():  # If there’s any stderr output
-                results.append({
-                    "input": args,
-                    "expected": expected_value,
-                    "output": "",
-                    "printed": "",
-                    "verdict": "Error",
-                    "error": completed.stderr
-                })
-                continue
-
-            # Parse stdout for JSON
+            # Parse stdout line by line for JSON
+            stdout_lines = completed.stdout.strip().splitlines()
             output_json = None
-            for line in completed.stdout.strip().splitlines():
+            for line in stdout_lines:
                 try:
                     output_json = json.loads(line)
                     break
@@ -296,36 +285,47 @@ if __name__ == "__main__":
                     continue
 
             if output_json is None:
+                # If wrapper failed somehow
                 results.append({
                     "input": args,
-                    "expected": expected_value,
+                    "expected": case["expected"],
                     "output": "",
-                    "printed": completed.stdout,
+                    "printed": "",
                     "verdict": "Error",
-                    "error": "No valid JSON output from user code"
+                    "error": "No JSON output from wrapper"
                 })
                 continue
 
-            returned_value = output_json.get("return")
-            printed_output = output_json.get("printed", "")
+            # Determine verdict
+            if "error" in output_json:
+                verdict = "Error"
+                returned_value = None
+                printed_output = ""
+                error_message = output_json["error"]
+            else:
+                returned_value = output_json.get("return")
+                printed_output = output_json.get("printed", "")
+                expected_value = json.loads(case["expected"])
+                verdict = "Correct!" if returned_value == expected_value else "Wrong!"
+                error_message = ""
 
-            verdict = "Correct!" if returned_value == expected_value else "Wrong!"
-
-            # Insert submission into DB
+            # Save submission to DB
             conn = get_db_connection()
             conn.execute(
                 "INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES (?, ?, ?, ?, ?)",
-                (code, runtime, 0, verdict, problem_id)
+                (user_code, runtime, 0, verdict, problem_id)
             )
             conn.commit()
             conn.close()
 
+            # Add to results
             results.append({
                 "input": args,
-                "expected": expected_value,
+                "expected": json.loads(case["expected"]),
                 "output": returned_value,
                 "printed": printed_output,
                 "verdict": verdict,
+                "error": error_message,
                 "runtime": runtime
             })
 
@@ -336,7 +336,8 @@ if __name__ == "__main__":
                 "output": "",
                 "printed": "",
                 "verdict": "Time Limit Exceeded",
-                "runtime": 2
+                "error": "",
+                "runtime": 2000
             })
         except Exception as e:
             results.append({
@@ -345,7 +346,8 @@ if __name__ == "__main__":
                 "output": "",
                 "printed": "",
                 "verdict": "Error",
-                "error": str(e)
+                "error": str(e),
+                "runtime": 0
             })
 
     return jsonify(results)
