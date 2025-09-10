@@ -1,8 +1,10 @@
-{% extends "base.html" %}
+{% extends "admin/admin.html" %}
 {% block title %}Submissions{% endblock %}
 
 {% block content %}
+
 <h2>Recent Submissions</h2>
+
 <table border="1">
     <tr>
         <th>ID</th>
@@ -10,14 +12,23 @@
         <th>User</th>
         <th>Verdict</th>
         <th>Created At</th>
+        <th>Source Code</th>
+	<td>Memory used</td>
+	<td>Run time</td>
+	<td>Language</td>
+
     </tr>
     {% for s in submissions %}
     <tr>
-        <td>{{ s.id }}</td>
+        <td>{{ s.subID }}</td>
         <td>{{ s.problem_id }}</td>
-        <td>{{ s.user }}</td>
-        <td>{{ s.verdict }}</td>
-        <td>{{ s.created_at }}</td>
+        <td>{{ s.userID }}</td>
+        <td>{{ s.status }}</td>
+        <td>{{ s.subTime }}</td>
+	<td>{{ s.code }}</td>
+	<td>{{ s.memory }}</td>
+	<td>{{ s.runtime }}</td>
+	<td>{{ s.language }}</td>
     </tr>
     {% endfor %}
 </table>

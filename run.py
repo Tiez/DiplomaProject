@@ -69,7 +69,7 @@ def edit_problem(id):
                  return(redirect(url_for('adminProblem')))
                  break
     print(testcases)
-    return render_template('admin/adminProblems.html',testcases=testcases, edit=True)
+    return render_template('admin/adminProblems.html',testcases=testcases,problem_id=id, edit=True)
 
 # admin delete problem
 @app.route('/admin/problems/delete/<int:id>')
@@ -84,8 +84,10 @@ def delete_problem(id):
 @app.route('/admin/submissions')
 def adminSubmissions():
     conn = get_db_connection()
-    submissions = conn.execute('SELECT * FROM submissions ORDER BY created_at DESC').fetchall()
+    submissions = conn.execute('SELECT * FROM submissions ORDER BY subTime DESC').fetchall()
     conn.close()
+    print([dict(row) for row in submissions])
+    submissions = [dict(row) for row in submissions]
     return render_template('admin/adminSub.html', submissions=submissions)
 
 
@@ -132,8 +134,8 @@ def admin_testcases(problem_id):
     if problem is None:
         print(testcases)
         return f"⚠️ Problem with id {problem_id} not found", 404
-
-    return render_template("admin/adminTestcases.html", problem=problem, testcases=testcases)
+    print(id)
+    return render_template("admin/adminTestcases.html", problem=problem, testcases=testcases, id=problem_id)
 
 # --- Add testcase ---
 @app.route("/admin/problem/<int:problem_id>/testcases/add", methods=["POST"])
@@ -164,7 +166,6 @@ def edit_testcase(problem_id, testcase_id):
     )
     conn.commit()
     conn.close()
-
     return redirect(url_for("admin_testcases", problem_id=problem_id))
 
 # --- Delete testcase ---
@@ -229,14 +230,18 @@ def run_code():
 
             printed_output = buffer.getvalue().strip()
             verdict = "Correct!" if output == eval(case["expected"]) else "Wrong!"
-
             results.append({
                 "input": args,
                 "expected": eval(case["expected"]),
                 "output": output,
                 "printed": printed_output,
-                "verdict": verdict
+                "verdict": verdict,
+
             })
+            conn = get_db_connection()
+            conn.execute("INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES ( ? , ? , ? , ?, ?)",(code, 5.0 , 10 , verdict, problem_id))
+            conn.commit()
+            conn.close()
 
         except Exception as e:
             results.append({
@@ -245,9 +250,13 @@ def run_code():
                 "output": "",
                 "printed": "",
                 "verdict": "Error",
-                "error": str(e)
+                "error": str(e),
             })
-
+            conn = get_db_connection()
+            conn.execute("INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES ( ? , ? , ? , ?, ?)",(code, 5.0 , 10 , "ERROR", problem_id))
+            conn.commit()
+            conn.close()
+    
     return jsonify(results)
 
 if __name__ == "__main__":
