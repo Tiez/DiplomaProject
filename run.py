@@ -18,9 +18,8 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 
 app = Flask(__name__)
-SANDBOX_DIR = os.path.expanduser("~/sandbox")
-os.makedirs(SANDBOX_DIR, exist_ok=True)
-TIME_LIMIT = 3
+
+
 
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates/ProblemDB.db")
@@ -203,18 +202,25 @@ def delete_testcase(problem_id, testcase_id):
 
 
 # Run user code
+SANDBOX_DIR = "/home/lenovo/sandbox"  # updated folder
+DOCKER_IMAGE = "python-sandbox"       # Docker image name you built
+
 @app.route("/run", methods=["POST"])
 def run_code():
+    import subprocess, json, time, os
     data = request.get_json()
     if not data or "code" not in data or "problem_id" not in data:
         return jsonify({"error": "Missing key 'code' or 'problem_id'"}), 400
 
-    code = data["code"]
+    code = "import sys\nimport json\n"+ data["code"] +"\n    return 4\n\n\nif __name__ == \"__main__\":\n    try:\n        args = json.loads(sys.argv[1])\n        result = solution(*args)\n        print(json.dumps({\"return\": result, \"printed\": \"\"}))\n    except Exception as e:\n        print(json.dumps({\"error\": str(e)}))"
+
+
+
     problem_id = data["problem_id"]
 
-    # Save user code
-    user_file = os.path.join(SANDBOX_DIR, "temp.py")
-    with open(user_file, "w") as f:
+    # Save user code to sandbox folder
+    file_path = os.path.join(SANDBOX_DIR, "temp.py")
+    with open(file_path, "w") as f:
         f.write(code)
 
     # Fetch test cases from DB
@@ -227,75 +233,93 @@ def run_code():
     results = []
 
     for case in test_cases:
-        args = eval(case["input"])
 
         try:
-            # Clear cached module to reload fresh code
-            if "temp" in sys.modules:
-                del sys.modules["temp"]
+            args = json.loads(case["input"])  # parse test case input
 
-            spec = importlib.util.spec_from_file_location("temp", user_file)
-            temp_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(temp_module)
-            user_func = getattr(temp_module, "solution")
+            docker_cmd = [
+                "docker", "run", "--rm",
+                "-v", f"{SANDBOX_DIR}:/app",
+                "--cpuset-cpus=0-3",          # limit to 25% of each core per container
+                "--cpu-period=100000",
+                "--cpu-quota=25000",
+                "--memory=100m",              # limit memory to 100MB
+                "--memory-swap=100m",         # no swap beyond 100MB
+                "python-sandbox",
+                "python3", "-u", "/app/temp.py",
+                json.dumps(args)
+            ]
 
-            # Capture printed output
-            buffer = io.StringIO()
-            old_stdout = sys.stdout
-            sys.stdout = buffer
 
-            # Measure runtime and memory
-            tracemalloc.start()
+
             start_time = time.perf_counter()
-
-            try:
-                if isinstance(args, (tuple, list)):
-                    output = user_func(*args)
-                else:
-                    output = user_func(args)
-                verdict = "Correct!" if output == eval(case["expected"]) else "Wrong!"
-            except Exception as e:
-                output = None
-                verdict = f"Runtime Error: {str(e)}"
-
+            completed = subprocess.run(
+                docker_cmd,
+                capture_output=True,
+                text=True,
+                timeout=4  # 2-second limit per test
+            )
             end_time = time.perf_counter()
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-            memory_kb = round(peak / 1024)
-            runtime = round((end_time - start_time)*1000)
+            runtime = round((end_time - start_time) * 1000)
+
+            # Robust JSON parsing: ignore lines that aren't valid JSON
+            stdout_lines = completed.stdout.strip().splitlines()
+            output_json = None
+            for line in stdout_lines:
+                try:
+                    output_json = json.loads(line)
+                    break
+                except json.JSONDecodeError:
+                    continue
+
+            if output_json is None:
+                raise ValueError(f"No valid JSON output from user code. Stdout:\n{completed.stdout}")
+
+            returned_value = output_json.get("return")
+            printed_output = output_json.get("printed", "")
 
 
-            printed_output = buffer.getvalue().strip()
-            sys.stdout = old_stdout
+            expected_value = json.loads(case["expected"])
+            verdict = "Correct!" if returned_value == expected_value else "Wrong!"
+            # Insert submission into DB
+            conn = get_db_connection()
+            conn.execute(
+                "INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES (?, ?, ?, ?, ?)",
+                (code, runtime, 0, verdict, problem_id)
+            )
+            conn.commit()
+            conn.close()
 
+            results.append({
+                "input": args,
+                "expected": expected_value,
+                "output": returned_value,
+                "printed": printed_output,
+                "verdict": verdict,
+                "runtime": runtime
+            })
+
+        except subprocess.TimeoutExpired:
+            results.append({
+                "input": args,
+                "expected": case["expected"],
+                "output": "",
+                "printed": "",
+                "verdict": "Time Limit Exceeded",
+                "runtime": 2
+            })
         except Exception as e:
-            output = None
-            printed_output = ""
-            runtime = 0
-            memory_kb = 0
-            verdict = f"Runtime Error: {str(e)}"
-            sys.stdout = old_stdout
-
-        # Append result for this test case
-        results.append({
-            "input": args,
-            "expected": eval(case["expected"]),
-            "output": output,
-            "printed": printed_output,
-            "verdict": verdict,
-            "runtime": math.floor(runtime*1000),
-            "memory_kb": math.floor(memory_kb)
-        })
-        # Insert into DB
-        conn = get_db_connection()
-        conn.execute(
-            "INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES (?, ?, ?, ?, ?)",
-            (code, runtime, memory_kb, verdict, problem_id)
-        )
-        conn.commit()
-        conn.close()
-
+            results.append({
+                "input": case["input"],
+                "expected": case["expected"],
+                "output": "",
+                "printed": "",
+                "verdict": "Error",
+                "error": str(e)
+            })
     return jsonify(results)
+
+
 
 
 if __name__ == "__main__":
