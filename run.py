@@ -5,10 +5,23 @@ import sys
 import io
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 import psutil
+import time
+import subprocess
+import json
+import resource
+import tracemalloc
+import math
+from timeout_decorator import timeout, TimeoutError
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
+
+
 
 app = Flask(__name__)
 SANDBOX_DIR = os.path.expanduser("~/sandbox")
 os.makedirs(SANDBOX_DIR, exist_ok=True)
+TIME_LIMIT = 3
+
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates/ProblemDB.db")
 
@@ -68,7 +81,7 @@ def edit_problem(id):
                  conn.close()
                  return(redirect(url_for('adminProblem')))
                  break
-    print(testcases)
+
     return render_template('admin/adminProblems.html',testcases=testcases,problem_id=id, edit=True)
 
 # admin delete problem
@@ -86,7 +99,6 @@ def adminSubmissions():
     conn = get_db_connection()
     submissions = conn.execute('SELECT * FROM submissions ORDER BY subTime DESC').fetchall()
     conn.close()
-    print([dict(row) for row in submissions])
     submissions = [dict(row) for row in submissions]
     return render_template('admin/adminSub.html', submissions=submissions)
 
@@ -94,9 +106,22 @@ def adminSubmissions():
 # admin system monitoring
 @app.route('/admin/system')
 def adminSystem():
+
+   
+
+    return render_template('admin/adminMonitoring.html')
+# admin system update
+@app.route('/admin/system_data')
+def adminsystemupdate():
+
     cpu = psutil.cpu_percent(interval=0.5)
     mem = psutil.virtual_memory().percent
-    return render_template('admin/adminMonitoring.html', cpu=cpu, mem=mem)
+
+    return jsonify({
+        "cpu": cpu,
+        "mem": mem,
+    })
+
 
 
 # Get all problems
@@ -128,13 +153,10 @@ def admin_testcases(problem_id):
     problem = conn.execute("SELECT * FROM problems WHERE id = ?", (problem_id,)).fetchone()
     testcases = conn.execute("SELECT * FROM test_cases WHERE problem_id = ?", (problem_id,)).fetchall()
 
-    print(problem)
     conn.close()
 
     if problem is None:
-        print(testcases)
         return f"⚠️ Problem with id {problem_id} not found", 404
-    print(id)
     return render_template("admin/adminTestcases.html", problem=problem, testcases=testcases, id=problem_id)
 
 # --- Add testcase ---
@@ -191,19 +213,9 @@ def run_code():
     problem_id = data["problem_id"]
 
     # Save user code
-    file_path = os.path.join(SANDBOX_DIR, "temp.py")
-    with open(file_path, "w") as f:
+    user_file = os.path.join(SANDBOX_DIR, "temp.py")
+    with open(user_file, "w") as f:
         f.write(code)
-
-    # Load the user's function
-    try:
-        spec = importlib.util.spec_from_file_location("temp", file_path)
-        temp_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(temp_module)
-        user_func = getattr(temp_module, "solution")  # assumes function name 'solution'
-    except Exception as e:
-        print(str(e))
-        return jsonify({"error": "Error loading code", "traceback": str(e)}), 400
 
     # Fetch test cases from DB
     conn = get_db_connection()
@@ -215,49 +227,76 @@ def run_code():
     results = []
 
     for case in test_cases:
+        args = eval(case["input"])
+
         try:
-            args = eval(case["input"])  # convert stored string to tuple/list
+            # Clear cached module to reload fresh code
+            if "temp" in sys.modules:
+                del sys.modules["temp"]
+
+            spec = importlib.util.spec_from_file_location("temp", user_file)
+            temp_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(temp_module)
+            user_func = getattr(temp_module, "solution")
 
             # Capture printed output
             buffer = io.StringIO()
             old_stdout = sys.stdout
             sys.stdout = buffer
 
+            # Measure runtime and memory
+            tracemalloc.start()
+            start_time = time.perf_counter()
+
             try:
-                output = user_func(*args)   # call the function
-            finally:
-                sys.stdout = old_stdout
+                if isinstance(args, (tuple, list)):
+                    output = user_func(*args)
+                else:
+                    output = user_func(args)
+                verdict = "Correct!" if output == eval(case["expected"]) else "Wrong!"
+            except Exception as e:
+                output = None
+                verdict = f"Runtime Error: {str(e)}"
+
+            end_time = time.perf_counter()
+            current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            memory_kb = round(peak / 1024)
+            runtime = round((end_time - start_time)*1000)
+
 
             printed_output = buffer.getvalue().strip()
-            verdict = "Correct!" if output == eval(case["expected"]) else "Wrong!"
-            results.append({
-                "input": args,
-                "expected": eval(case["expected"]),
-                "output": output,
-                "printed": printed_output,
-                "verdict": verdict,
-
-            })
-            conn = get_db_connection()
-            conn.execute("INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES ( ? , ? , ? , ?, ?)",(code, 5.0 , 10 , verdict, problem_id))
-            conn.commit()
-            conn.close()
+            sys.stdout = old_stdout
 
         except Exception as e:
-            results.append({
-                "input": case["input"],
-                "expected": case["expected"],
-                "output": "",
-                "printed": "",
-                "verdict": "Error",
-                "error": str(e),
-            })
-            conn = get_db_connection()
-            conn.execute("INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES ( ? , ? , ? , ?, ?)",(code, 5.0 , 10 , "ERROR", problem_id))
-            conn.commit()
-            conn.close()
-    
+            output = None
+            printed_output = ""
+            runtime = 0
+            memory_kb = 0
+            verdict = f"Runtime Error: {str(e)}"
+            sys.stdout = old_stdout
+
+        # Append result for this test case
+        results.append({
+            "input": args,
+            "expected": eval(case["expected"]),
+            "output": output,
+            "printed": printed_output,
+            "verdict": verdict,
+            "runtime": math.floor(runtime*1000),
+            "memory_kb": math.floor(memory_kb)
+        })
+        # Insert into DB
+        conn = get_db_connection()
+        conn.execute(
+            "INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES (?, ?, ?, ?, ?)",
+            (code, runtime, memory_kb, verdict, problem_id)
+        )
+        conn.commit()
+        conn.close()
+
     return jsonify(results)
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

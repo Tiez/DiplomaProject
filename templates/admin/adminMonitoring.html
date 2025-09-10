@@ -3,6 +3,21 @@
 
 {% block content %}
 <h2>System Monitor</h2>
-<p>CPU Usage: {{ cpu }}%</p>
-<p>Memory Usage: {{ mem }}%</p>
+<p>CPU Usage: <span id="cpu">--</span>%</p>
+<p>Memory Usage: <span id="memory">--</span>%</p>
+<script>
+  function updateSystemData() {
+    fetch("/admin/system_data")
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("cpu").innerText = data.cpu.toFixed(1);
+        document.getElementById("memory").innerText = data.mem.toFixed(1);
+      })
+      .catch(err => console.error(err));
+  }
+
+  setInterval(updateSystemData, 1300); // every 2 sec
+  updateSystemData(); // run once on load
+</script>
+
 {% endblock %}
