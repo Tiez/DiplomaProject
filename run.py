@@ -208,17 +208,31 @@ DOCKER_IMAGE = "python-sandbox"       # Docker image name you built
 @app.route("/run", methods=["POST"])
 def run_code():
     import subprocess, json, time, os
+
     data = request.get_json()
     if not data or "code" not in data or "problem_id" not in data:
         return jsonify({"error": "Missing key 'code' or 'problem_id'"}), 400
 
-    code = "import sys\nimport json\n"+ data["code"] +"\n    return 4\n\n\nif __name__ == \"__main__\":\n    try:\n        args = json.loads(sys.argv[1])\n        result = solution(*args)\n        print(json.dumps({\"return\": result, \"printed\": \"\"}))\n    except Exception as e:\n        print(json.dumps({\"error\": str(e)}))"
+    code = f"""
+import sys
+import json
+import io
+import contextlib
 
+{data['code']}
 
+if __name__ == "__main__":
+    try:
+        args = json.loads(sys.argv[1])
+        with io.StringIO() as buf, contextlib.redirect_stdout(buf):
+            returned_value = solution(*args)
+            printed_output = buf.getvalue()
+        print(json.dumps({{"return": returned_value, "printed": printed_output}}))
+    except Exception as e:
+        print(json.dumps({{"error": str(e)}}))
+"""
 
     problem_id = data["problem_id"]
-
-    # Save user code to sandbox folder
     file_path = os.path.join(SANDBOX_DIR, "temp.py")
     with open(file_path, "w") as f:
         f.write(code)
@@ -233,39 +247,48 @@ def run_code():
     results = []
 
     for case in test_cases:
-
         try:
-            args = json.loads(case["input"])  # parse test case input
+            args = json.loads(case["input"])
+            expected_value = json.loads(case["expected"])
 
             docker_cmd = [
                 "docker", "run", "--rm",
                 "-v", f"{SANDBOX_DIR}:/app",
-                "--cpuset-cpus=0-3",          # limit to 25% of each core per container
+                "--cpuset-cpus=0-3",
                 "--cpu-period=100000",
                 "--cpu-quota=25000",
-                "--memory=100m",              # limit memory to 100MB
-                "--memory-swap=100m",         # no swap beyond 100MB
+                "--memory=100m",
+                "--memory-swap=100m",
                 "python-sandbox",
                 "python3", "-u", "/app/temp.py",
                 json.dumps(args)
             ]
-
-
 
             start_time = time.perf_counter()
             completed = subprocess.run(
                 docker_cmd,
                 capture_output=True,
                 text=True,
-                timeout=4  # 2-second limit per test
+                timeout=4
             )
             end_time = time.perf_counter()
             runtime = round((end_time - start_time) * 1000)
 
-            # Robust JSON parsing: ignore lines that aren't valid JSON
-            stdout_lines = completed.stdout.strip().splitlines()
+            # --- Fix for syntax/runtime errors ---
+            if completed.stderr.strip():  # If there’s any stderr output
+                results.append({
+                    "input": args,
+                    "expected": expected_value,
+                    "output": "",
+                    "printed": "",
+                    "verdict": "Error",
+                    "error": completed.stderr
+                })
+                continue
+
+            # Parse stdout for JSON
             output_json = None
-            for line in stdout_lines:
+            for line in completed.stdout.strip().splitlines():
                 try:
                     output_json = json.loads(line)
                     break
@@ -273,14 +296,21 @@ def run_code():
                     continue
 
             if output_json is None:
-                raise ValueError(f"No valid JSON output from user code. Stdout:\n{completed.stdout}")
+                results.append({
+                    "input": args,
+                    "expected": expected_value,
+                    "output": "",
+                    "printed": completed.stdout,
+                    "verdict": "Error",
+                    "error": "No valid JSON output from user code"
+                })
+                continue
 
             returned_value = output_json.get("return")
             printed_output = output_json.get("printed", "")
 
-
-            expected_value = json.loads(case["expected"])
             verdict = "Correct!" if returned_value == expected_value else "Wrong!"
+
             # Insert submission into DB
             conn = get_db_connection()
             conn.execute(
@@ -317,7 +347,9 @@ def run_code():
                 "verdict": "Error",
                 "error": str(e)
             })
+
     return jsonify(results)
+
 
 
 
