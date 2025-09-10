@@ -3,21 +3,89 @@
 
 {% block content %}
 <h2>System Monitor</h2>
+
+
 <p>CPU Usage: <span id="cpu">--</span>%</p>
+<canvas id="cpuChart" width="400" height="80"></canvas>
 <p>Memory Usage: <span id="memory">--</span>%</p>
+<canvas id="memoryChart" width="400" height="80"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  function updateSystemData() {
+const maxDataPoints = 20;
+let cpuData = [], memoryData = [], labels = [];
+
+const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+
+const cpuChart = new Chart(cpuCtx, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ 
+        label: 'CPU %', 
+        data: cpuData, 
+        borderColor: '#ff4d4d', 
+        backgroundColor: 'transparent', 
+        borderWidth: 2, 
+        pointRadius: 0,
+        fill: false 
+    }]},
+    options: {
+        responsive: true,
+        animation: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } }, x: { display: false } }
+    }
+});
+
+const memoryChart = new Chart(memoryCtx, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ 
+        label: 'Memory %', 
+        data: memoryData, 
+        borderColor: '#4da6ff', 
+        backgroundColor: 'transparent', 
+        borderWidth: 2, 
+        pointRadius: 0,
+        fill: false 
+    }]},
+    options: {
+        responsive: true,
+        animation: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } }, x: { display: false } }
+    }
+});
+
+function updateSystemCharts() {
     fetch("/admin/system_data")
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("cpu").innerText = data.cpu.toFixed(1);
-        document.getElementById("memory").innerText = data.mem.toFixed(1);
-      })
-      .catch(err => console.error(err));
-  }
+        .then(res => res.json())
+        .then(data => {
+            const now = new Date().toLocaleTimeString();
+            const cpu = data.cpu !== undefined ? data.cpu : 0;
+            const memory = data.mem !== undefined ? data.mem : data.memory || 0;
 
-  setInterval(updateSystemData, 1300); // every 2 sec
-  updateSystemData(); // run once on load
+
+            document.getElementById("cpu").innerText = data.cpu.toFixed(1);
+            document.getElementById("memory").innerText = data.mem.toFixed(1);
+
+
+            labels.push(now);
+            cpuData.push(cpu);
+            memoryData.push(memory);
+
+            if (labels.length > maxDataPoints) {
+                labels.shift();
+                cpuData.shift();
+                memoryData.shift();
+            }
+
+            cpuChart.update();
+            memoryChart.update();
+        })
+        .catch(err => console.error("Error fetching system data:", err));
+}
+
+setInterval(updateSystemCharts, 1000);
+updateSystemCharts(); // initial call
 </script>
-
 {% endblock %}
