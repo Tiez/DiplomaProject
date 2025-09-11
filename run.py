@@ -277,6 +277,15 @@ if __name__ == "__main__":
             # Parse stdout line by line for JSON
             stdout_lines = completed.stdout.strip().splitlines()
             output_json = None
+
+
+
+            if not completed.stdout.strip().splitlines():
+                output_json = completed.stderr.strip().splitlines()
+                output_json = {"error": "\n".join(output_json)}
+                print(output_json)
+
+
             for line in stdout_lines:
                 try:
                     output_json = json.loads(line)
@@ -297,6 +306,8 @@ if __name__ == "__main__":
                 continue
 
             # Determine verdict
+            print(output_json)
+
             if "error" in output_json:
                 verdict = "Error"
                 returned_value = None
@@ -351,7 +362,6 @@ if __name__ == "__main__":
             })
 
     return jsonify(results)
-
 
 
 

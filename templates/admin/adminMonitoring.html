@@ -12,7 +12,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const maxDataPoints = 20;
+const maxDataPoints = 40;
 let cpuData = [], memoryData = [], labels = [];
 
 const cpuCtx = document.getElementById('cpuChart').getContext('2d');
@@ -25,9 +25,10 @@ const cpuChart = new Chart(cpuCtx, {
         data: cpuData, 
         borderColor: '#ff4d4d', 
         backgroundColor: 'transparent', 
-        borderWidth: 2, 
+        borderWidth: 4, 
         pointRadius: 0,
-        fill: false 
+        fill: true,
+        tension: 0.2 
     }]},
     options: {
         responsive: true,
@@ -43,10 +44,11 @@ const memoryChart = new Chart(memoryCtx, {
         label: 'Memory %', 
         data: memoryData, 
         borderColor: '#4da6ff', 
-        backgroundColor: 'transparent', 
-        borderWidth: 2, 
+        backgroundColor: 'transparent',
+        fill: false, 
+        borderWidth: 4, 
         pointRadius: 0,
-        fill: false 
+        tension: 0.2
     }]},
     options: {
         responsive: true,
@@ -85,7 +87,7 @@ function updateSystemCharts() {
         .catch(err => console.error("Error fetching system data:", err));
 }
 
-setInterval(updateSystemCharts, 1000);
+setInterval(updateSystemCharts, 500);
 updateSystemCharts(); // initial call
 </script>
 {% endblock %}
