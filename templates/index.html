@@ -8,7 +8,7 @@
     body { font-family: Arial, sans-serif; margin: 20px; }
     textarea { width: 100%; height: 150px; font-family: monospace; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     th { background-color: #f4f4f4; }
     .correct { background-color: #d4edda; }
     .wrong { background-color: #f8d7da; }
@@ -68,6 +68,10 @@ loadProblems();
 
 // Run code
 runButton.addEventListener("click", async () => {
+    // Disable button immediately to prevent re-submission
+    runButton.disabled = true;
+    runButton.textContent = "Running submission...";
+
     resultsBody.innerHTML = "";
     tracebackDiv.style.display = "none";
     tracebackDiv.textContent = "";
@@ -75,8 +79,8 @@ runButton.addEventListener("click", async () => {
     const problem_id = problemSelect.value;
     const code = codeInput.value.trim();
 
-    if (!problem_id) { alert("Please select a problem."); return; }
-    if (!code) { alert("Please enter your code."); return; }
+    if (!problem_id) { alert("Please select a problem."); runButton.disabled = false; return; }
+    if (!code) { alert("Please enter your code."); runButton.disabled = false; return; }
 
     try {
         const response = await fetch("/run", {
@@ -87,34 +91,38 @@ runButton.addEventListener("click", async () => {
 
         const results = await response.json();
 
-        // If the backend returned an error object for all results
+        // Show traceback/errors if returned
         if (results.error) {
             tracebackDiv.style.display = "block";
             tracebackDiv.textContent = results.traceback || results.error;
-            return;
+        } else {
+            // Populate results table
+            results.forEach(r => {
+                const row = document.createElement("tr");
+                if (r.verdict === "Correct!") row.className = "correct";
+                else if (r.verdict === "Wrong!") row.className = "wrong";
+                else row.className = "error";
+
+                row.innerHTML = `
+                    <td>${JSON.stringify(r.input)}</td>
+                    <td>${JSON.stringify(r.expected)}</td>
+                    <td>${JSON.stringify(r.output)}</td>
+                    <td>${r.printed || ""}</td>
+                    <td>${r.verdict}</td>
+                    <td>${r.error || ""}</td>
+                `;
+                resultsBody.appendChild(row);
+            });
         }
-
-        // Populate results table
-        results.forEach(r => {
-            const row = document.createElement("tr");
-            if (r.verdict === "Correct!") row.className = "correct";
-            else if (r.verdict === "Wrong!") row.className = "wrong";
-            else row.className = "error";
-
-            row.innerHTML = `
-                <td><pre>${JSON.stringify(r.input)}</pre></td>
-                <td><pre>${JSON.stringify(r.expected)}</pre></td>
-                <td><pre>${JSON.stringify(r.output)}</pre></td>
-                <td><pre>${r.printed || ""}</pre></td>
-                <td>${r.verdict}</td>
-                <td><pre>${r.error || ""}</pre></td>
-            `;
-            resultsBody.appendChild(row);
-        });
 
     } catch (err) {
         tracebackDiv.style.display = "block";
         tracebackDiv.textContent = "Failed to run code: " + err;
+    } finally {
+        // Re-enable button only after results are rendered
+        runButton.disabled = false;
+        runButton.textContent = "Run code";
+
     }
 });
 </script>

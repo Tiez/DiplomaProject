@@ -221,15 +221,23 @@ def run_code():
 {user_code}
 
 if __name__ == "__main__":
-    import sys, json, io, contextlib
+    import sys, json, io, contextlib, tracemalloc
     try:
         args = json.loads(sys.argv[1])
+        tracemalloc.start()
+
+
         with io.StringIO() as buf, contextlib.redirect_stdout(buf):
             returned_value = solution(*args)
             printed_output = buf.getvalue()
-        print(json.dumps({{"return": returned_value, "printed": printed_output}}))
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop
+
+
+        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak}}))
     except Exception as e:
-        print(json.dumps({{"error": str(e)}}))
+        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024}}))
+
 """
 
     # Save wrapped code to sandbox folder
@@ -258,7 +266,7 @@ if __name__ == "__main__":
                 "--cpu-period=100000",
                 "--cpu-quota=25000",
                 "--memory=100m",
-                "--memory-swap=100m",
+                "--memory-swap=500m",
                 "python-sandbox",
                 "python3", "-u", "/app/temp.py",
                 json.dumps(args)
@@ -280,7 +288,6 @@ if __name__ == "__main__":
 
 
 
-            print(completed)
 
             if completed.returncode == 137:
                 print("hello")
@@ -289,9 +296,8 @@ if __name__ == "__main__":
             elif not completed.stdout.strip().splitlines():
                 output_json = completed.stderr.strip().splitlines()
                 output_json = {"error": "\n".join(output_json)}
-                print(output_json)
 
-
+            print(output_json)
             for line in stdout_lines:
                 try:
                     output_json = json.loads(line)
@@ -319,6 +325,7 @@ if __name__ == "__main__":
                 returned_value = None
                 printed_output = ""
                 error_message = output_json["error"]
+                print(error_message)
             else:
                 returned_value = output_json.get("return")
                 printed_output = output_json.get("printed", "")
@@ -328,9 +335,10 @@ if __name__ == "__main__":
 
             # Save submission to DB
             conn = get_db_connection()
+            print(output_json)
             conn.execute(
                 "INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES (?, ?, ?, ?, ?)",
-                (user_code, runtime, 0, verdict, problem_id)
+                (user_code, runtime, output_json["memory"], verdict, problem_id)
             )
             conn.commit()
             conn.close()
@@ -357,13 +365,20 @@ if __name__ == "__main__":
                 "runtime": 2000
             })
         except Exception as e:
+
+            if "During handling of the above exception" in output_json["error"]:
+                output_json["error"] = output_json["error"].split("^^^^^^^^^^^^^^^")[1].strip()
+
+                output_json["error"] = output_json["error"].split("During handling")[0].strip()
+
+            print(Exception)
             results.append({
                 "input": case["input"],
                 "expected": case["expected"],
                 "output": "",
                 "printed": "",
                 "verdict": "Error",
-                "error": str(e),
+                "error": output_json["error"],
                 "runtime": 0
             })
 
