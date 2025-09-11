@@ -280,7 +280,13 @@ if __name__ == "__main__":
 
 
 
-            if not completed.stdout.strip().splitlines():
+            print(completed)
+
+            if completed.returncode == 137:
+                print("hello")
+                output_json = {"error":"MemoryLimit Reached"}
+
+            elif not completed.stdout.strip().splitlines():
                 output_json = completed.stderr.strip().splitlines()
                 output_json = {"error": "\n".join(output_json)}
                 print(output_json)
