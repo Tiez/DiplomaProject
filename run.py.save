@@ -221,10 +221,8 @@ def run_code():
 {user_code}
 
 if __name__ == "__main__":
-    import sys, json, io, contextlib, tracemalloc, traceback, time
-    start_time = time.perf_counter()
+    import sys, json, io, contextlib, tracemalloc, traceback
     try:
-
         args = json.loads(sys.argv[1])
         tracemalloc.start()
 
@@ -234,13 +232,12 @@ if __name__ == "__main__":
             printed_output = buf.getvalue()
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop
-        end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
-        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time * 1000, 1)}}))
+
+
+        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak}}))
     except Exception as e:
-        end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
-        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time * 1000, 1)}}))
+        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024}}))
+
 
 """
 
@@ -276,12 +273,15 @@ if __name__ == "__main__":
                 json.dumps(args)
             ]
 
+            start_time = time.perf_counter()
             completed = subprocess.run(
                 docker_cmd,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=4
             )
+            end_time = time.perf_counter()
+            runtime = round((end_time - start_time) * 1000)
 
             # Parse stdout line by line for JSON
             stdout_lines = completed.stdout.strip().splitlines()
@@ -304,9 +304,6 @@ if __name__ == "__main__":
                 except json.JSONDecodeError:
                     continue
 
-
-
-
             if output_json is None:
                 # If wrapper failed somehow
                 results.append({
@@ -326,6 +323,7 @@ if __name__ == "__main__":
                 returned_value = None
                 printed_output = ""
                 error_message = output_json["error"]
+                print(error_message)
             else:
                 returned_value = output_json.get("return")
                 printed_output = output_json.get("printed", "")
@@ -335,9 +333,10 @@ if __name__ == "__main__":
 
             # Save submission to DB
             conn = get_db_connection()
+            print(output_json)
             conn.execute(
                 "INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES (?, ?, ?, ?, ?)",
-                (user_code, output_json["runtime"], output_json["memory"], verdict, problem_id)
+                (user_code, runtime, output_json["memory"], verdict, problem_id)
             )
             conn.commit()
             conn.close()
@@ -350,7 +349,7 @@ if __name__ == "__main__":
                 "printed": printed_output,
                 "verdict": verdict,
                 "error": error_message,
-                "runtime": str(output_json["runtime"]) + "ms"
+                "runtime": runtime
             })
 
         except subprocess.TimeoutExpired:
@@ -361,18 +360,15 @@ if __name__ == "__main__":
                 "printed": "",
                 "verdict": "Time Limit Exceeded",
                 "error": "",
-                "runtime": str(output_json["runtime"]) + "ms"
+                "runtime": 2000
             })
         except Exception as e:
 
             if "During handling of the above exception" in output_json["error"]:
-                error_message = output_json["error"].splitlines()
-                error_message = "\n".join(output_json["error"][4:8])
+                output_json["error"] = output_json["error"].split("^^^^^^^^^^^^^^^")[1].strip()
+                if output_json
 
-                #print(output_json["error"])
-
-
-                #output_json["error"] = output_json["error"].split("During handling")[0]
+                output_json["error"] = output_json["error"].split("During handling")[0].strip()
 
             results.append({
                 "input": case["input"],
@@ -380,9 +376,11 @@ if __name__ == "__main__":
                 "output": "",
                 "printed": "",
                 "verdict": "Error",
-                "error": error_message,
+                "error": output_json["error"],
                 "runtime": 0
             })
+            print(results[0]["error"])
+
     return jsonify(results)
 
 

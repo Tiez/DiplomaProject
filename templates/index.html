@@ -13,7 +13,7 @@
     .correct { background-color: #d4edda; }
     .wrong { background-color: #f8d7da; }
     .error { background-color: #fff3cd; }
-    #traceback { white-space: pre-wrap; background: #f2f2f2; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; display: none; }
+    #traceback { white-space: pre-line; background: #f2f2f2; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; display: none; }
 </style>
 </head>
 <body>
@@ -56,7 +56,7 @@ const tracebackDiv = document.getElementById("traceback");
 async function loadProblems() {
     const res = await fetch("/problems");
     const problems = await res.json();
-    problemSelect.innerHTML = "";
+    problemSelect.innerTEXT = "";
     problems.forEach(p => {
         const opt = document.createElement("option");
         opt.value = p.id;
@@ -109,7 +109,7 @@ runButton.addEventListener("click", async () => {
                     <td>${JSON.stringify(r.output)}</td>
                     <td>${r.printed || ""}</td>
                     <td>${r.verdict}</td>
-                    <td>${r.error || ""}</td>
+                    <td><pre>${r.error || ""}</pre></td>
                 `;
                 resultsBody.appendChild(row);
             });
