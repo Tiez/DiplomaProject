@@ -11,17 +11,17 @@ import json
 import resource
 import tracemalloc
 import math
+import queue
+import threading
+import uuid
+
 from timeout_decorator import timeout, TimeoutError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
-
-
-
+NUM_WORKERS = 5
+results_map = {}
+submission_queue = queue.Queue()
 app = Flask(__name__)
-
-
-
-
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates/ProblemDB.db")
 
 # Connect to DB
@@ -121,8 +121,6 @@ def adminsystemupdate():
         "mem": mem,
     })
 
-
-
 # Get all problems
 @app.route("/problems")
 def get_problems():
@@ -143,8 +141,7 @@ def get_problem(id):
         "test_cases": [dict(tc) for tc in test_cases]
     })
 
-
-# --- List testcases for a problem ---
+# List testcases for a problem
 @app.route("/admin/problem/<int:problem_id>/testcases")
 def admin_testcases(problem_id):
     conn = get_db_connection()
@@ -158,7 +155,7 @@ def admin_testcases(problem_id):
         return f"⚠️ Problem with id {problem_id} not found", 404
     return render_template("admin/adminTestcases.html", problem=problem, testcases=testcases, id=problem_id)
 
-# --- Add testcase ---
+# Add testcase
 @app.route("/admin/problem/<int:problem_id>/testcases/add", methods=["POST"])
 def add_testcase(problem_id):
     input_data = request.form["input_data"]
@@ -174,7 +171,7 @@ def add_testcase(problem_id):
 
     return redirect(url_for("admin_testcases", problem_id=problem_id))
 
-# --- Edit testcase ---
+# Edit testcase 
 @app.route("/admin/problem/<int:problem_id>/testcases/<int:testcase_id>/edit", methods=["POST"])
 def edit_testcase(problem_id, testcase_id):
     input_data = request.form["input_data"]
@@ -189,7 +186,7 @@ def edit_testcase(problem_id, testcase_id):
     conn.close()
     return redirect(url_for("admin_testcases", problem_id=problem_id))
 
-# --- Delete testcase ---
+# Delete testcase 
 @app.route("/admin/problem/<int:problem_id>/testcases/<int:testcase_id>/delete", methods=["POST"])
 def delete_testcase(problem_id, testcase_id):
     conn = get_db_connection()
@@ -205,53 +202,56 @@ def delete_testcase(problem_id, testcase_id):
 SANDBOX_DIR = "/home/lenovo/sandbox"  # updated folder
 DOCKER_IMAGE = "python-sandbox"       # Docker image name you built
 
-@app.route("/run", methods=["POST"])
-def run_code():
-    import subprocess, json, os, time
+def worker():
+    while True:
+        submission_id, user_code, problem_id = submission_queue.get()
+        print(f"[Worker] Recieved submission ID: {submission_id}")
+        try:
+            result = run_submission(user_code, problem_id)
+            results_map[submission_id] = result
+            print(f"[Worker] Stored result for submission IDL {submission_id}")
+        except Exception as e:
+            results_map[submission_id] = [{"verdict": "Error", "error": str(e)}]
+            print(f"[Worker] Error in submission ID: {submission_id}: {e}")
+        finally:
+            submission_queue.task_done()
+            print(f"[Worker] Finished submission ID: {submission_id}")
 
-    data = request.get_json()
-    if not data or "code" not in data or "problem_id" not in data:
-        return jsonify({"error": "Missing key 'code' or 'problem_id'"}), 400
+for _ in range(NUM_WORKERS):
+    threading.Thread(target=worker, daemon=True).start()
 
-    user_code = data["code"]
-    problem_id = data["problem_id"]
+# ---------------- Run Submission ----------------
+def run_submission(user_code, problem_id):
+    temp_file = os.path.join(SANDBOX_DIR, f"temp_{uuid.uuid4().hex}.py")
 
-    # Wrap user code to catch exceptions and always output JSON
     wrapped_code = f"""
 {user_code}
 
 if __name__ == "__main__":
-    import sys, json, io, contextlib, tracemalloc, traceback, time
+    import sys, json, io, contextlib, tracemalloc, time
     start_time = time.perf_counter()
     try:
-
         args = json.loads(sys.argv[1])
         tracemalloc.start()
-
-
         with io.StringIO() as buf, contextlib.redirect_stdout(buf):
             returned_value = solution(*args)
             printed_output = buf.getvalue()
         current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop
+        tracemalloc.stop()
         end_time = time.perf_counter()
         elapsed_time = end_time - start_time
-        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time * 1000, 1)}}))
+        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time*1000,1)}}))
     except Exception as e:
         end_time = time.perf_counter()
         elapsed_time = end_time - start_time
-        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time * 1000, 1)}}))
-
+        print(json.dumps({{"error": str(e), "runtime": round(elapsed_time*1000,1)}}))
 """
 
-    # Save wrapped code to sandbox folder
-    SANDBOX_DIR = "/home/lenovo/sandbox"
-    file_path = os.path.join(SANDBOX_DIR, "temp.py")
-    with open(file_path, "w") as f:
+    with open(temp_file, "w") as f:
         f.write(wrapped_code)
 
-    # Fetch test cases from DB
-    conn = get_db_connection()
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     test_cases = conn.execute(
         "SELECT input, expected FROM test_cases WHERE problem_id=?", (problem_id,)
     ).fetchall()
@@ -262,40 +262,16 @@ if __name__ == "__main__":
     for case in test_cases:
         try:
             args = json.loads(case["input"])
-
             docker_cmd = [
                 "docker", "run", "--rm",
                 "-v", f"{SANDBOX_DIR}:/app",
-                "--cpuset-cpus=0-3",
-                "--cpu-period=100000",
-                "--cpu-quota=25000",
-                "--memory=100m",
-                "--memory-swap=500m",
-                "python-sandbox",
-                "python3", "-u", "/app/temp.py",
+                DOCKER_IMAGE,
+                "python3", f"/app/{os.path.basename(temp_file)}",
                 json.dumps(args)
             ]
-
-            completed = subprocess.run(
-                docker_cmd,
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-
-            # Parse stdout line by line for JSON
+            completed = subprocess.run(docker_cmd, capture_output=True, text=True, timeout=5)
             stdout_lines = completed.stdout.strip().splitlines()
             output_json = None
-
-
-
-
-            if completed.returncode == 137:
-                output_json = {"error":"MemoryLimit Reached"}
-
-            elif not completed.stdout.strip().splitlines():
-                output_json = completed.stderr.strip().splitlines()
-                output_json = {"error": "\n".join(output_json)}
 
             for line in stdout_lines:
                 try:
@@ -304,22 +280,16 @@ if __name__ == "__main__":
                 except json.JSONDecodeError:
                     continue
 
-
-
-
             if output_json is None:
-                # If wrapper failed somehow
                 results.append({
                     "input": args,
-                    "expected": case["expected"],
+                    "expected": json.loads(case["expected"]),
                     "output": "",
                     "printed": "",
                     "verdict": "Error",
-                    "error": "No JSON output from wrapper"
+                    "error": "No JSON output"
                 })
                 continue
-
-            # Determine verdict
 
             if "error" in output_json:
                 verdict = "Error"
@@ -333,58 +303,46 @@ if __name__ == "__main__":
                 verdict = "Correct!" if returned_value == expected_value else "Wrong!"
                 error_message = ""
 
-            # Save submission to DB
-            conn = get_db_connection()
-            conn.execute(
-                "INSERT INTO submissions (code, runtime, memory, status, problem_id) VALUES (?, ?, ?, ?, ?)",
-                (user_code, output_json["runtime"], output_json["memory"], verdict, problem_id)
-            )
-            conn.commit()
-            conn.close()
-
-            # Add to results
             results.append({
                 "input": args,
                 "expected": json.loads(case["expected"]),
                 "output": returned_value,
                 "printed": printed_output,
                 "verdict": verdict,
-                "error": error_message,
-                "runtime": str(output_json["runtime"]) + "ms"
+                "error": error_message
             })
 
         except subprocess.TimeoutExpired:
             results.append({
                 "input": args,
-                "expected": case["expected"],
+                "expected": json.loads(case["expected"]),
                 "output": "",
                 "printed": "",
                 "verdict": "Time Limit Exceeded",
-                "error": "",
-                "runtime": str(output_json["runtime"]) + "ms"
+                "error": ""
             })
-        except Exception as e:
 
-            if "During handling of the above exception" in output_json["error"]:
-                error_message = output_json["error"].splitlines()
-                error_message = "\n".join(output_json["error"][4:8])
+    return results
 
-                #print(output_json["error"])
+# ---------------- API Route ----------------
+@app.route("/run", methods=["POST"])
+def run_code():
+    data = request.get_json()
+    if not data or "code" not in data or "problem_id" not in data:
+        return jsonify({"error": "Missing 'code' or 'problem_id'"}), 400
 
+    submission_id = str(uuid.uuid4())
+    user_code = data["code"]
+    problem_id = data["problem_id"]
 
-                #output_json["error"] = output_json["error"].split("During handling")[0]
+    submission_queue.put((submission_id, user_code, problem_id))
+    return jsonify({"submission_id": submission_id})
 
-            results.append({
-                "input": case["input"],
-                "expected": case["expected"],
-                "output": "",
-                "printed": "",
-                "verdict": "Error",
-                "error": error_message,
-                "runtime": 0
-            })
-    return jsonify(results)
-
+@app.route("/result/<submission_id>")
+def get_result(submission_id):
+    if submission_id not in results_map:
+        return jsonify({"status": "pending"})
+    return jsonify({"status": "done", "results": results_map[submission_id]})
 
 
 

@@ -4,3 +4,4 @@ sandbox/
 *.db
 .vscode/
 *.swp
+*.py.save

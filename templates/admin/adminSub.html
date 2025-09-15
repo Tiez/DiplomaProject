@@ -13,9 +13,9 @@
         <th>Verdict</th>
         <th>Created At</th>
         <th>Source Code</th>
-	<td>Memory used</td>
-	<td>Run time</td>
-	<td>Language</td>
+        <td>Memory used</td>
+        <td>Run time</td>
+        <td>Language</td>
 
     </tr>
     {% for s in submissions %}
@@ -25,10 +25,12 @@
         <td>{{ s.userID }}</td>
         <td>{{ s.status }}</td>
         <td>{{ s.subTime }}</td>
-	<td>{{ s.code }}</td>
-	<td>{{ s.memory }} Bytes</td>
-	<td>{{ s.runtime }}ms</td>
-	<td>{{ s.language }}</td>
+        <td>
+            <pre>{{ s.code }}</pre>
+        </td>
+        <td>{{ s.memory }} Bytes</td>
+        <td>{{ s.runtime }}ms</td>
+        <td>{{ s.language }}</td>
     </tr>
     {% endfor %}
 </table>
