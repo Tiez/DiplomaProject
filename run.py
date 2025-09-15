@@ -18,7 +18,7 @@ import uuid
 from timeout_decorator import timeout, TimeoutError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
-NUM_WORKERS = 5
+NUM_WORKERS = 3
 results_map = {}
 submission_queue = queue.Queue()
 app = Flask(__name__)
@@ -108,17 +108,19 @@ def adminSystem():
 
    
 
-    return render_template('admin/adminMonitoring.html')
+    return render_template('admin/adminMonitoring.html', worker_count=NUM_WORKERS)
 # admin system update
 @app.route('/admin/system_data')
 def adminsystemupdate():
 
     cpu = psutil.cpu_percent(interval=0.5)
     mem = psutil.virtual_memory().percent
-
+    
     return jsonify({
         "cpu": cpu,
         "mem": mem,
+        "workerStats": worker_status,
+        "queue": submission_queue.qsize()
     })
 
 # Get all problems
@@ -202,23 +204,30 @@ def delete_testcase(problem_id, testcase_id):
 SANDBOX_DIR = "/home/lenovo/sandbox"  # updated folder
 DOCKER_IMAGE = "python-sandbox"       # Docker image name you built
 
-def worker():
+worker_status = {}
+
+def worker(worker_id):
     while True:
+        worker_status[worker_id] = "idle"
         submission_id, user_code, problem_id = submission_queue.get()
-        print(f"[Worker] Recieved submission ID: {submission_id}")
+        # print(f"[Worker] {worker_id}  Recieved submission ID: {submission_id}")
+        worker_status[worker_id] = f"{submission_id}"
         try:
             result = run_submission(user_code, problem_id)
             results_map[submission_id] = result
-            print(f"[Worker] Stored result for submission IDL {submission_id}")
+            # print(f"[Worker] {worker_id}  Stored result for submission IDL {submission_id}")
         except Exception as e:
             results_map[submission_id] = [{"verdict": "Error", "error": str(e)}]
-            print(f"[Worker] Error in submission ID: {submission_id}: {e}")
+            # print(f"[Worker] {worker_id}  Error in submission ID: {submission_id}: {e}")
+
         finally:
             submission_queue.task_done()
-            print(f"[Worker] Finished submission ID: {submission_id}")
+            # print(f"[Worker] {worker_id}  Finished submission ID: {submission_id}")
+            
 
-for _ in range(NUM_WORKERS):
-    threading.Thread(target=worker, daemon=True).start()
+
+for i in range(NUM_WORKERS):
+    threading.Thread(target=worker, args=(i,), daemon=True).start()
 
 # ---------------- Run Submission ----------------
 def run_submission(user_code, problem_id):
@@ -321,7 +330,7 @@ if __name__ == "__main__":
                 "verdict": "Time Limit Exceeded",
                 "error": ""
             })
-
+    print(results)
     return results
 
 # ---------------- API Route ----------------
@@ -334,6 +343,13 @@ def run_code():
     submission_id = str(uuid.uuid4())
     user_code = data["code"]
     problem_id = data["problem_id"]
+    conn = get_db_connection()
+    conn.execute(
+        "INSERT INTO submissions (problem_id, code ) VALUES (?, ?)",
+        ( problem_id, user_code  ))
+    
+    conn.commit()
+    conn.close()
 
     submission_queue.put((submission_id, user_code, problem_id))
     return jsonify({"submission_id": submission_id})

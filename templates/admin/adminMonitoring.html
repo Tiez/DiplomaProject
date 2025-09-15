@@ -5,89 +5,126 @@
 <h2>System Monitor</h2>
 
 
-<p>CPU Usage: <span id="cpu">--</span>%</p>
-<canvas id="cpuChart" width="400" height="80"></canvas>
-<p>Memory Usage: <span id="memory">--</span>%</p>
-<canvas id="memoryChart" width="400" height="80"></canvas>
+<div style="display: flex;  flex-direction: row; ">
+    <div style="width: 40%;">
+        <p>CPU Usage: <span id="cpu">--</span>%</p>
+        <canvas id="cpuChart" width="400" height="80"></canvas>
+        <p>Memory Usage: <span id="memory">--</span>%</p>
+        <canvas id="memoryChart" width="400" height="80"></canvas>
+    </div>
+    <div>
+        {% for i in range(worker_count) %}
+        <div style="margin: 5px; border: 1px solid black; height: 100px; width: 420px;">
+            worker {{ i }} <br>
+            Status: <span id="worker-{{ i }}-status">--</span><br>
+            submission ID: <span id="worker-{{ i }}-subid">--</span>
+        </div>
+        {% endfor %}
+    </div>
+    queue size: <span id="queueLen">--</span>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const maxDataPoints = 40;
-let cpuData = [], memoryData = [], labels = [];
+    const maxDataPoints = 40;
+    let cpuData = [], memoryData = [], labels = [];
 
-const cpuCtx = document.getElementById('cpuChart').getContext('2d');
-const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+    const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+    const memoryCtx = document.getElementById('memoryChart').getContext('2d');
 
-const cpuChart = new Chart(cpuCtx, {
-    type: 'line',
-    data: { labels: labels, datasets: [{ 
-        label: 'CPU %', 
-        data: cpuData, 
-        borderColor: '#ff4d4d', 
-        backgroundColor: 'transparent', 
-        borderWidth: 4, 
-        pointRadius: 0,
-        fill: true,
-        tension: 0.2 
-    }]},
-    options: {
-        responsive: true,
-        animation: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } }, x: { display: false } }
+    const cpuChart = new Chart(cpuCtx, {
+        type: 'line',
+        data: {
+            labels: labels, datasets: [{
+                label: 'CPU %',
+                data: cpuData,
+                borderColor: '#ff4d4d',
+                backgroundColor: 'transparent',
+                borderWidth: 4,
+                pointRadius: 0,
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } }, x: { display: false } }
+        }
+    });
+
+    const memoryChart = new Chart(memoryCtx, {
+        type: 'line',
+        data: {
+            labels: labels, datasets: [{
+                label: 'Memory %',
+                data: memoryData,
+                borderColor: '#4da6ff',
+                backgroundColor: 'transparent',
+                fill: false,
+                borderWidth: 4,
+                pointRadius: 0,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } }, x: { display: false } }
+        }
+    });
+
+    function updateSystemCharts() {
+        fetch("/admin/system_data")
+            .then(res => res.json())
+            .then(data => {
+                const now = new Date().toLocaleTimeString();
+                const cpu = data.cpu !== undefined ? data.cpu : 0;
+                const memory = data.mem !== undefined ? data.mem : data.memory || 0;
+
+
+
+                document.getElementById("cpu").innerText = data.cpu.toFixed(1);
+                document.getElementById("memory").innerText = data.mem.toFixed(1);
+                document.getElementById("queueLen").innerText = data.queue.toFixed(1);
+
+                Object.keys(data.workerStats).forEach(workerId => {
+                    const statusEl = document.getElementById(`worker-${workerId}-status`);
+                    const subIdEl = document.getElementById(`worker-${workerId}-subid`);
+
+                    const status = data.workerStats[workerId];
+                    console.log(data.workerStats[workerId])
+                    if (status.startsWith("idle")) {
+                        statusEl.innerText = "idle";
+                        subIdEl.innerText = "--";
+                    } else {
+
+                        const subId = status.split(" ")[1];
+                        statusEl.innerText = "processing";
+                        subIdEl.innerText = data.workerStats[workerId];
+                    }
+                });
+
+
+                labels.push(now);
+                cpuData.push(cpu);
+                memoryData.push(memory);
+
+                if (labels.length > maxDataPoints) {
+                    labels.shift();
+                    cpuData.shift();
+                    memoryData.shift();
+                }
+
+                cpuChart.update();
+                memoryChart.update();
+            })
+            .catch(err => console.error("Error fetching system data:", err));
     }
-});
 
-const memoryChart = new Chart(memoryCtx, {
-    type: 'line',
-    data: { labels: labels, datasets: [{ 
-        label: 'Memory %', 
-        data: memoryData, 
-        borderColor: '#4da6ff', 
-        backgroundColor: 'transparent',
-        fill: false, 
-        borderWidth: 4, 
-        pointRadius: 0,
-        tension: 0.2
-    }]},
-    options: {
-        responsive: true,
-        animation: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { min: 0, max: 100, ticks: { stepSize: 10 } }, x: { display: false } }
-    }
-});
-
-function updateSystemCharts() {
-    fetch("/admin/system_data")
-        .then(res => res.json())
-        .then(data => {
-            const now = new Date().toLocaleTimeString();
-            const cpu = data.cpu !== undefined ? data.cpu : 0;
-            const memory = data.mem !== undefined ? data.mem : data.memory || 0;
-
-
-            document.getElementById("cpu").innerText = data.cpu.toFixed(1);
-            document.getElementById("memory").innerText = data.mem.toFixed(1);
-
-
-            labels.push(now);
-            cpuData.push(cpu);
-            memoryData.push(memory);
-
-            if (labels.length > maxDataPoints) {
-                labels.shift();
-                cpuData.shift();
-                memoryData.shift();
-            }
-
-            cpuChart.update();
-            memoryChart.update();
-        })
-        .catch(err => console.error("Error fetching system data:", err));
-}
-
-setInterval(updateSystemCharts, 500);
-updateSystemCharts(); // initial call
+    setInterval(updateSystemCharts, 500);
+    updateSystemCharts(); // initial call
 </script>
 {% endblock %}
