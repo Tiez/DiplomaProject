@@ -213,7 +213,7 @@ def worker(worker_id):
         # print(f"[Worker] {worker_id}  Recieved submission ID: {submission_id}")
         worker_status[worker_id] = f"{submission_id}"
         try:
-            result = run_submission(user_code, problem_id)
+            result = run_submission(user_code, problem_id, submission_id)
             results_map[submission_id] = result
             # print(f"[Worker] {worker_id}  Stored result for submission IDL {submission_id}")
         except Exception as e:
@@ -230,18 +230,19 @@ for i in range(NUM_WORKERS):
     threading.Thread(target=worker, args=(i,), daemon=True).start()
 
 # ---------------- Run Submission ----------------
-def run_submission(user_code, problem_id):
-    temp_file = os.path.join(SANDBOX_DIR, f"temp_{uuid.uuid4().hex}.py")
+def run_submission(user_code, problem_id, submission_id):
+    temp_file = os.path.join(SANDBOX_DIR, f"temp_{submission_id}.py")
 
     wrapped_code = f"""
 {user_code}
 
 if __name__ == "__main__":
-    import sys, json, io, contextlib, tracemalloc, time
+    import sys, json, io, contextlib, tracemalloc, time, traceback
     start_time = time.perf_counter()
+    tracemalloc.start()
     try:
         args = json.loads(sys.argv[1])
-        tracemalloc.start()
+        
         with io.StringIO() as buf, contextlib.redirect_stdout(buf):
             returned_value = solution(*args)
             printed_output = buf.getvalue()
@@ -253,7 +254,12 @@ if __name__ == "__main__":
     except Exception as e:
         end_time = time.perf_counter()
         elapsed_time = end_time - start_time
-        print(json.dumps({{"error": str(e), "runtime": round(elapsed_time*1000,1)}}))
+
+        error_msg = traceback.format_exc()[250:]
+        
+        
+
+        print(json.dumps({{"error": error_msg, "runtime": round(elapsed_time*1000,1)}}))
 """
 
     with open(temp_file, "w") as f:
@@ -289,6 +295,8 @@ if __name__ == "__main__":
                 except json.JSONDecodeError:
                     continue
 
+            
+
             if output_json is None:
                 results.append({
                     "input": args,
@@ -305,13 +313,38 @@ if __name__ == "__main__":
                 returned_value = None
                 printed_output = ""
                 error_message = output_json["error"]
+                results.append({
+                    "input": args,
+                    "expected": json.loads(case["expected"]),
+                    "output": returned_value,
+                    "printed": printed_output,
+                    "verdict": verdict,
+                    "error": error_message
+                })
+
+
+                print(str(error_message))
+                databaseInsert = {"status": f'RunTime Error:\n{error_message}', "memory": 0, "runtime": 0.0}
+
+                conn = get_db_connection()
+                conn.execute(
+                    "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
+                    ( databaseInsert["status"], databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
+                
+                conn.commit()
+                conn.close()
+
+
+
+
+                return results
             else:
                 returned_value = output_json.get("return")
                 printed_output = output_json.get("printed", "")
                 expected_value = json.loads(case["expected"])
                 verdict = "Correct!" if returned_value == expected_value else "Wrong!"
-                error_message = ""
 
+                error_message = ""
             results.append({
                 "input": args,
                 "expected": json.loads(case["expected"]),
@@ -320,8 +353,8 @@ if __name__ == "__main__":
                 "verdict": verdict,
                 "error": error_message
             })
-
         except subprocess.TimeoutExpired:
+            
             results.append({
                 "input": args,
                 "expected": json.loads(case["expected"]),
@@ -330,7 +363,36 @@ if __name__ == "__main__":
                 "verdict": "Time Limit Exceeded",
                 "error": ""
             })
+            return results
+
+    databaseInsert = {"status": 'Correct', "memory": 0, "runtime": 0.0}
+
+    for result in results:
+        if result["error"] != '':
+            databaseInsert["status"] = "Error"
+        elif result["verdict"] == "Time Limit Exceeded":
+            databaseInsert["status"] = "Time Limit"
+        elif result["verdict"] == "Wrong!":
+            databaseInsert["status"] = "Wrong"
+
+
+            
+    # if databaseInsert["error"] == "Time Limit" or databaseInsert["error"] == "Error":
+    databaseInsert["memory"] = output_json["memory"]
+    databaseInsert["runtime"] = output_json["runtime"]
+        # ...
+    print("returned")
     print(results)
+    conn = get_db_connection()
+    conn.execute(
+        "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
+        ( databaseInsert["status"], databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
+    
+    conn.commit()
+    conn.close()
+
+    
+    # print(jsonify(results))
     return results
 
 # ---------------- API Route ----------------
@@ -345,8 +407,8 @@ def run_code():
     problem_id = data["problem_id"]
     conn = get_db_connection()
     conn.execute(
-        "INSERT INTO submissions (problem_id, code ) VALUES (?, ?)",
-        ( problem_id, user_code  ))
+        "INSERT INTO submissions (problem_id, code, UniqID) VALUES (?, ?, ?)",
+        ( problem_id, user_code , submission_id ))
     
     conn.commit()
     conn.close()

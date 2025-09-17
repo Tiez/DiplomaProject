@@ -121,7 +121,7 @@
         }
 
         runButton.addEventListener("click", async () => {
-            // runButton.disabled = true;
+            runButton.disabled = true;
             runButton.textContent = "Running submission...";
             resultsBody.innerHTML = "";
             tracebackDiv.style.display = "none";
@@ -144,12 +144,14 @@
                 let results = await pollResult(submission_id);
 
                 if (!Array.isArray(results)) results = [results];
-
+                console.log(results)
                 results.forEach(r => {
                     const row = document.createElement("tr");
                     if (r.verdict === "Correct!") row.className = "correct";
                     else if (r.verdict === "Wrong!") row.className = "wrong";
                     else row.className = "error";
+
+
 
                     row.innerHTML = `
                 <td>${JSON.stringify(r.input)}</td>

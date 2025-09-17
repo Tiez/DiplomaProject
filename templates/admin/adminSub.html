@@ -8,6 +8,7 @@
 <table border="1">
     <tr>
         <th>ID</th>
+        <th>UniqID</th>
         <th>Problem ID</th>
         <th>User</th>
         <th>Verdict</th>
@@ -21,9 +22,12 @@
     {% for s in submissions %}
     <tr>
         <td>{{ s.subID }}</td>
+        <td>{{ s.UniqID }}</td>
         <td>{{ s.problem_id }}</td>
         <td>{{ s.userID }}</td>
-        <td>{{ s.status }}</td>
+        <td>
+            <pre>{{ s.status }}</pre>
+        </td>
         <td>{{ s.subTime }}</td>
         <td>
             <pre>{{ s.code }}</pre>
