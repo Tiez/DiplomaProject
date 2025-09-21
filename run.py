@@ -398,7 +398,20 @@ if __name__ == "__main__":
     conn.close()
 
     
-    # print(jsonify(results))
+
+
+# Deleting used submission file 
+    file_to_delete = "../sandbox/temp_" + submission_id + ".py"
+    try:
+        os.remove(file_to_delete)
+        print(f"File '{file_to_delete}' deleted successfully.")
+    except FileNotFoundError:
+        print(f"Error: File '{file_to_delete}' not found.")
+    except PermissionError:
+        print(f"Error: Permission denied to delete '{file_to_delete}'.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        # print(jsonify(results))
     return results
 
 # ---------------- API Route ----------------
@@ -431,4 +444,4 @@ def get_result(submission_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
