@@ -11,17 +11,19 @@
             margin: 20px;
         }
 
-        textarea {
-            width: 100%;
-            height: 150px;
-            font-family: monospace;
-            font-size: 14px;
+        #editor {
+            height: 450px;
+            width: 1000px;
+            border: 10px solid #1e1e1e;
+            border-radius: 10px;
+            margin: 5px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            border-radius: 5px;
         }
 
         th,
@@ -29,22 +31,23 @@
             border: 1px solid #ccc;
             padding: 8px;
             text-align: left;
+            border-radius: 5px;
         }
 
         th {
-            background-color: #f4f4f4;
+            background-color: #1a1a1a;
         }
 
         .correct {
-            background-color: #d4edda;
+            background-color: #455a4a;
         }
 
         .wrong {
-            background-color: #f8d7da;
+            background-color: #573b3d;
         }
 
         .error {
-            background-color: #fff3cd;
+            background-color: #5e5846;
         }
 
         #traceback {
@@ -58,39 +61,63 @@
             display: none;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
 </head>
 
-<body>
-
-    <h1>Code Runner</h1>
-    <label for="problem">Select Problem:</label>
+<body style="background-color: #1a1a1a;">
+    <label for="problem" style="color: #e0e0e0;">Select Problem:</label>
     <select id="problem"></select>
 
-    <h3>Your Code:</h3>
-    <pre><textarea id="code">def solution(a, b):
-    return 180</textarea></pre>
+    <div style="flex-direction: row-reverse; display: flex; ">
+        <div>
+            <div id="editor"></div>
+            <div
+                style="background-color: #1e1e1e; width: 1010px; height:215px; margin: 5px; border-radius: 10px; color: #e0e0e0; padding: 5px;">
+                <button id="runButton"
+                    style="float: right; margin: 5px; color: azure; background-color: #5f74ec; border-radius: 5px; font-size: 16px; border-color: #5f74ec;">Run
+                    Code</button>
+                <div id="traceback"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Input</th>
+                            <th>Expected</th>
+                            <th>Output</th>
+                            <th>stdout</th>
+                            <th>Verdict</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div>
+            <div
+                style="background-color: #1e1e1e; width: 455px; height: 679px; margin: 5px; border-radius: 10px; color: #e0e0e0; padding: 10px;">
+                Problem Name
+            </div>
+        </div>
+    </div>
 
-    <button id="runButton">Run Code</button>
-    <div id="traceback"></div>
 
-    <h3>Results:</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Input</th>
-                <th>Expected</th>
-                <th>Output</th>
-                <th>stdout</th>
-                <th>Verdict</th>
-                <th>Error</th>
-            </tr>
-        </thead>
-        <tbody id="resultsBody"></tbody>
-    </table>
+
+
 
     <script>
+        // Configure Monaco
+        require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs" } });
+        let editor;
+        require(["vs/editor/editor.main"], function () {
+            editor = monaco.editor.create(document.getElementById("editor"), {
+                value: `def solution(a, b):\n    return a + b`,
+                language: "python",
+                theme: "vs-dark",
+                automaticLayout: true
+            });
+        });
+
         const problemSelect = document.getElementById("problem");
-        const codeInput = document.getElementById("code");
         const runButton = document.getElementById("runButton");
         const resultsBody = document.getElementById("resultsBody");
         const tracebackDiv = document.getElementById("traceback");
@@ -121,14 +148,15 @@
         }
 
         runButton.addEventListener("click", async () => {
-            runButton.disabled = false;
+            runButton.disabled = true;
             runButton.textContent = "Running submission...";
             resultsBody.innerHTML = "";
             tracebackDiv.style.display = "none";
             tracebackDiv.textContent = "";
 
             const problem_id = problemSelect.value;
-            const code = codeInput.value.trim();
+            const code = editor.getValue().trim();   // ✅ Monaco instead of textarea
+
             if (!problem_id) { alert("Please select a problem."); runButton.disabled = false; return; }
             if (!code) { alert("Please enter your code."); runButton.disabled = false; return; }
 
@@ -144,23 +172,20 @@
                 let results = await pollResult(submission_id);
 
                 if (!Array.isArray(results)) results = [results];
-                console.log(results)
                 results.forEach(r => {
                     const row = document.createElement("tr");
                     if (r.verdict === "Correct!") row.className = "correct";
                     else if (r.verdict === "Wrong!") row.className = "wrong";
                     else row.className = "error";
 
-
-
                     row.innerHTML = `
-                <td>${JSON.stringify(r.input)}</td>
-                <td>${JSON.stringify(r.expected)}</td>
-                <td>${JSON.stringify(r.output)}</td>
-                <td>${r.printed || ""}</td>
-                <td>${r.verdict}</td>
-                <td><pre>${r.error || ""}</pre></td>
-            `;
+            <td>${JSON.stringify(r.input)}</td>
+            <td>${JSON.stringify(r.expected)}</td>
+            <td>${JSON.stringify(r.output)}</td>
+            <td>${r.printed || ""}</td>
+            <td>${r.verdict}</td>
+            <td><pre>${r.error || ""}</pre></td>
+          `;
                     resultsBody.appendChild(row);
                 });
 
@@ -173,7 +198,6 @@
             }
         });
     </script>
-
 </body>
 
 </html>
