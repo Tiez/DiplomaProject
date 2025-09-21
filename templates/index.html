@@ -121,7 +121,7 @@
         }
 
         runButton.addEventListener("click", async () => {
-            runButton.disabled = true;
+            runButton.disabled = false;
             runButton.textContent = "Running submission...";
             resultsBody.innerHTML = "";
             tracebackDiv.style.display = "none";

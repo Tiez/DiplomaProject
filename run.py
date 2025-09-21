@@ -21,6 +21,9 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 NUM_WORKERS = 3
 results_map = {}
 submission_queue = queue.Queue()
+queue_info = {}
+
+
 app = Flask(__name__)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates/ProblemDB.db")
 
@@ -106,9 +109,11 @@ def adminSubmissions():
 @app.route('/admin/system')
 def adminSystem():
 
-   
 
     return render_template('admin/adminMonitoring.html', worker_count=NUM_WORKERS)
+
+
+
 # admin system update
 @app.route('/admin/system_data')
 def adminsystemupdate():
@@ -120,7 +125,8 @@ def adminsystemupdate():
         "cpu": cpu,
         "mem": mem,
         "workerStats": worker_status,
-        "queue": submission_queue.qsize()
+        "queue": submission_queue.qsize(),
+        "pending_submissions": list(submission_queue.queue)[:10]
     })
 
 # Get all problems
@@ -295,7 +301,7 @@ if __name__ == "__main__":
                 except json.JSONDecodeError:
                     continue
 
-            
+            print(output_json)
 
             if output_json is None:
                 results.append({
