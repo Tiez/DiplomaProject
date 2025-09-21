@@ -291,7 +291,13 @@ if __name__ == "__main__":
                 json.dumps(args)
             ]
             completed = subprocess.run(docker_cmd, capture_output=True, text=True, timeout=5)
-            stdout_lines = completed.stdout.strip().splitlines()
+
+            if completed.stdout:
+                stdout_lines = completed.stdout.strip().splitlines()
+            else:
+                stdout_lines = completed.stderr.strip().splitlines()
+            
+            
             output_json = None
 
             for line in stdout_lines:
@@ -299,8 +305,15 @@ if __name__ == "__main__":
                     output_json = json.loads(line)
                     break
                 except json.JSONDecodeError:
-                    continue
 
+
+                    continue
+            if not output_json:
+               
+                stdout_lines = " \n".join(stdout_lines)
+                output_json = {"error":stdout_lines[58:]}
+                print(stdout_lines)
+                
             print(output_json)
 
             if output_json is None:
@@ -329,13 +342,12 @@ if __name__ == "__main__":
                 })
 
 
-                print(str(error_message))
                 databaseInsert = {"status": f'RunTime Error:\n{error_message}', "memory": 0, "runtime": 0.0}
 
                 conn = get_db_connection()
                 conn.execute(
-                    "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
-                    ( databaseInsert["status"], databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
+                    "UPDATE submissions SET status=?, memory=?, runtime=?, error=? WHERE UniqID = ?",
+                    ( "Error", databaseInsert["memory"], databaseInsert["runtime"], databaseInsert["status"], submission_id ))
                 
                 conn.commit()
                 conn.close()
@@ -387,9 +399,12 @@ if __name__ == "__main__":
     databaseInsert["memory"] = output_json["memory"]
     databaseInsert["runtime"] = output_json["runtime"]
         # ...
-    print("returned")
-    print(results)
+
     conn = get_db_connection()
+
+
+
+    
     conn.execute(
         "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
         ( databaseInsert["status"], databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
@@ -400,7 +415,7 @@ if __name__ == "__main__":
     
 
 
-# Deleting used submission file 
+    # Deleting used submission file 
     file_to_delete = "../sandbox/temp_" + submission_id + ".py"
     try:
         os.remove(file_to_delete)

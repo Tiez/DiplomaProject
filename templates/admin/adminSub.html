@@ -15,6 +15,7 @@
         <th>Created At</th>
         <th>Source Code</th>
         <td>Memory used</td>
+        <td>Error</td>
         <td>Run time</td>
         <td>Language</td>
 
@@ -33,6 +34,9 @@
             <pre>{{ s.code }}</pre>
         </td>
         <td>{{ s.memory }} Bytes</td>
+        <td>
+            <pre>{{ s.error }} </pre>
+        </td>
         <td>{{ s.runtime }}ms</td>
         <td>{{ s.language }}</td>
     </tr>
