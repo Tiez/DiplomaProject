@@ -6,30 +6,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code Runner</title>
     <style>
+        /* Customize the entire scrollbar */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #777676;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b4b4b;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #545454;
+        }
+
+        /* Monaco-specific scrollbars */
+        .monaco-editor .minimap {
+            display: none !important;
+        }
+
+        .monaco-scrollable-element>.scrollbar>.slider {
+            background: #4b4b4b !important;
+            border-radius: 10px !important;
+        }
+
+        .monaco-scrollable-element>.scrollbar {
+            background: #777676 !important;
+            width: 7px !important;
+            border-radius: 10px !important;
+        }
+
+        .monaco-scrollable-element>.scrollbar>.slider:hover {
+            background: #545454 !important;
+        }
+
         body {
             font-family: Arial;
-            margin: 20px;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #111;
+        }
+
+        /* Problem selector bar */
+        #problem-bar {
+            padding: 10px;
+            background: #111;
+            color: #e0e0e0;
+        }
+
+        /* Main container: editor + problem description */
+        #main-container {
+            flex: 1;
+            display: flex;
+            /* overflow: hidden; */
+        }
+
+        /* Problem description */
+        #problem-container {
+            flex: 0.4;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 10px;
+            overflow: auto;
+            max-height: 706px;
+        }
+
+        /* Editor + results container */
+        #editor-results-container {
+            flex: 0.6;
+            display: flex;
+            flex-direction: column;
+            margin: 5px;
+            overflow: auto;
+            min-height: 300px;
+        }
+
+        /* Editor container */
+        #editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #1e1e1e;
+            border-radius: 10px;
+            background-color: #1e1e1e;
+            margin-bottom: 5px;
         }
 
         #editor {
-            height: 450px;
-            width: 1000px;
-            border: 10px solid #1e1e1e;
+            flex: 1;
+        }
+
+        #runButton {
+            margin: 10px;
+            color: azure;
+            background-color: #5f74ec;
+            border-radius: 6px;
+            font-size: 16px;
+            border-color: #5f74ec;
+            align-self: flex-end;
+        }
+
+        /* Results/output */
+        #results-container {
+            background-color: #1e1e1e;
             border-radius: 10px;
-            margin: 5px;
+            color: #e0e0e0;
+            padding: 5px;
+            flex: 0.4;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        #traceback {
+            white-space: pre-line;
+            background: #f2f2f2;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            display: none;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
             border-radius: 5px;
         }
 
         th,
         td {
             border: 1px solid #ccc;
-            padding: 8px;
+            padding: 6px;
             text-align: left;
             border-radius: 5px;
         }
@@ -50,32 +169,100 @@
             background-color: #5e5846;
         }
 
-        #traceback {
-            white-space: pre-line;
-            background: #f2f2f2;
-            padding: 10px;
-            margin-top: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
-            display: none;
+        /* Monaco scrollbar */
+        .monaco-editor .minimap {
+            display: none !important;
+        }
+
+        .monaco-scrollable-element>.scrollbar>.slider {
+            background: #4b4b4b !important;
+            border-radius: 10px !important;
+        }
+
+        .monaco-scrollable-element>.scrollbar {
+            background: #777676 !important;
+            width: 7px !important;
+            border-radius: 10px !important;
+        }
+
+        .monaco-scrollable-element>.scrollbar>.slider:hover {
+            background: #545454 !important;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
 </head>
 
-<body style="background-color: #1a1a1a;">
-    <label for="problem" style="color: #e0e0e0;">Select Problem:</label>
-    <select id="problem"></select>
+<body>
+    <!-- Problem selector bar -->
+    <div id="problem-bar">
+        <label for="problem">Select Problem:</label>
+        <select id="problem"></select>
+    </div>
 
-    <div style="flex-direction: row-reverse; display: flex; ">
-        <div>
-            <div id="editor"></div>
-            <div
-                style="background-color: #1e1e1e; width: 1010px; height:215px; margin: 5px; border-radius: 10px; color: #e0e0e0; padding: 5px;">
-                <button id="runButton"
-                    style="float: right; margin: 5px; color: azure; background-color: #5f74ec; border-radius: 5px; font-size: 16px; border-color: #5f74ec;">Run
-                    Code</button>
+    <!-- Main container -->
+    <div id="main-container">
+        <!-- Problem description -->
+        <div id="problem-container">
+            <div style="margin-top: -20px;">
+                <h3>999. Problem Name</h3>
+            </div>
+
+            <p>Problem description here...</p>
+            <h4>Examples</h4>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+            <p>Example test cases...</p>
+
+
+        </div>
+
+        <!-- Editor + results -->
+        <div id="editor-results-container">
+            <!-- Editor -->
+            <div id="editor-container">
+                <div id="editor"></div>
+                <button id="runButton">Run Code</button>
+            </div>
+            <!-- Results -->
+            <div id="results-container">
                 <div id="traceback"></div>
                 <table>
                     <thead>
@@ -92,19 +279,20 @@
                 </table>
             </div>
         </div>
-        <div>
-            <div
-                style="background-color: #1e1e1e; width: 455px; height: 679px; margin: 5px; border-radius: 10px; color: #e0e0e0; padding: 10px;">
-                Problem Name
-            </div>
-        </div>
     </div>
 
-
-
-
-
     <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const dropdown = document.getElementById('problem');
+            const contentArea = document.getElementById('problem-container');
+
+            dropdown.addEventListener('change', function () {
+                const selectedValue = dropdown.value;
+
+                console.log(selectedValue)
+            });
+        });
         // Configure Monaco
         require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs" } });
         let editor;
@@ -113,8 +301,15 @@
                 value: `def solution(a, b):\n    return a + b`,
                 language: "python",
                 theme: "vs-dark",
-                automaticLayout: true
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
             });
+        });
+
+        // Make editor re-layout on window resize
+        window.addEventListener("resize", () => {
+            if (editor) editor.layout();
         });
 
         const problemSelect = document.getElementById("problem");
@@ -155,7 +350,7 @@
             tracebackDiv.textContent = "";
 
             const problem_id = problemSelect.value;
-            const code = editor.getValue().trim();   // ✅ Monaco instead of textarea
+            const code = editor.getValue().trim();
 
             if (!problem_id) { alert("Please select a problem."); runButton.disabled = false; return; }
             if (!code) { alert("Please enter your code."); runButton.disabled = false; return; }
@@ -170,8 +365,8 @@
                 const submission_id = submitData.submission_id;
 
                 let results = await pollResult(submission_id);
-
                 if (!Array.isArray(results)) results = [results];
+
                 results.forEach(r => {
                     const row = document.createElement("tr");
                     if (r.verdict === "Correct!") row.className = "correct";
@@ -179,16 +374,15 @@
                     else row.className = "error";
 
                     row.innerHTML = `
-            <td>${JSON.stringify(r.input)}</td>
-            <td>${JSON.stringify(r.expected)}</td>
-            <td>${JSON.stringify(r.output)}</td>
-            <td>${r.printed || ""}</td>
-            <td>${r.verdict}</td>
-            <td><pre>${r.error || ""}</pre></td>
-          `;
+                        <td>${JSON.stringify(r.input)}</td>
+                        <td>${JSON.stringify(r.expected)}</td>
+                        <td>${JSON.stringify(r.output)}</td>
+                        <td>${r.printed || ""}</td>
+                        <td>${r.verdict}</td>
+                        <td><pre>${r.error || ""}</pre></td>
+                    `;
                     resultsBody.appendChild(row);
                 });
-
             } catch (err) {
                 tracebackDiv.style.display = "block";
                 tracebackDiv.textContent = "Failed to run code: " + err;

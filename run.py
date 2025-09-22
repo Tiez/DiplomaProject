@@ -363,6 +363,7 @@ if __name__ == "__main__":
                 verdict = "Correct!" if returned_value == expected_value else "Wrong!"
 
                 error_message = ""
+
             results.append({
                 "input": args,
                 "expected": json.loads(case["expected"]),
