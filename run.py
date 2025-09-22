@@ -53,9 +53,12 @@ def add_problem():
     if request.method == 'POST':
         title = request.form['title']
         description = request.form['description']
+        examples = request.form['example']
+        prefix = request.form['prefix']
+        constraints = request.form['constraints']
         conn = get_db_connection()
-        conn.execute('INSERT INTO problems (title, description) VALUES (?, ?)',
-                     (title, description))
+        conn.execute('INSERT INTO problems (title, description, examples, prefix, constraints) VALUES (?, ?, ?, ?, ?)',
+                     (title, description, examples, prefix, constraints))
         conn.commit()
         conn.close()
         return redirect(url_for('adminProblem'))
@@ -373,7 +376,7 @@ if __name__ == "__main__":
                 "error": error_message
             })
         except subprocess.TimeoutExpired:
-            
+
             results.append({
                 "input": args,
                 "expected": json.loads(case["expected"]),

@@ -104,6 +104,8 @@
 
         #editor {
             flex: 1;
+            margin-top: 15px;
+            margin-left: -10px;
         }
 
         #runButton {
@@ -204,53 +206,16 @@
         <!-- Problem description -->
         <div id="problem-container">
             <div style="margin-top: -20px;">
-                <h3>999. Problem Name</h3>
+                <h3><label id="ID"></label>. <label id="name"></label></h3>
             </div>
 
-            <p>Problem description here...</p>
-            <h4>Examples</h4>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
+            <p id="description">Problem description here...</p>
+            <h4>Жишээ</h4>
 
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
+            <pre><p id="example"></p></pre>
+            <h4>Хязгаарлалт</h4>
 
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-            <p>Example test cases...</p>
-
+            <pre><p id="constraints"></p></pre>
 
         </div>
 
@@ -259,7 +224,7 @@
             <!-- Editor -->
             <div id="editor-container">
                 <div id="editor"></div>
-                <button id="runButton">Run Code</button>
+                <button id="runButton">Ажиллуулах</button>
             </div>
             <!-- Results -->
             <div id="results-container">
@@ -267,12 +232,12 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Input</th>
-                            <th>Expected</th>
-                            <th>Output</th>
-                            <th>stdout</th>
-                            <th>Verdict</th>
-                            <th>Error</th>
+                            <th>Оролт</th>
+                            <th>Зөв хариу</th>
+                            <th>Гаралт</th>
+                            <th>Хэвэлсэн</th>
+                            <th>Хариу</th>
+                            <th>Алдаа</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody"></tbody>
@@ -283,13 +248,14 @@
 
     <script>
 
+        let editorPrefix = "";
         document.addEventListener('DOMContentLoaded', function () {
             const dropdown = document.getElementById('problem');
             const contentArea = document.getElementById('problem-container');
 
             dropdown.addEventListener('change', function () {
                 const selectedValue = dropdown.value;
-
+                refreshProblem(selectedValue);
                 console.log(selectedValue)
             });
         });
@@ -317,8 +283,44 @@
         const resultsBody = document.getElementById("resultsBody");
         const tracebackDiv = document.getElementById("traceback");
 
+        async function refreshProblem(problemId) {
+            try {
+                const res = await fetch(`/problem/${problemId}`, { cache: "no-store" });
+                if (!res.ok) throw new Error("Failed to fetch problem " + problemId);
+                const payload = await res.json();
+
+                let problemIDLabel = document.getElementById("ID");
+                let problemName = document.getElementById("name");
+                let problemDecs = document.getElementById("description");
+                let problemExamle = document.getElementById("example");
+                let problemContraints = document.getElementById("constraints");
+
+                // 
+
+                // clear
+                problemIDLabel.textContent = "";
+                problemName.textContent = "";
+                problemDecs.textContent = "";
+                problemExamle.textContent = "";
+                problemContraints.textContent = "";
+
+                const p = payload.problem || {};
+                problemIDLabel.textContent = p.id;
+                problemName.textContent = p.title;
+                problemDecs.textContent = p.description;
+                problemContraints.textContent = p.constraints;
+                problemExamle.textContent = p.examples;
+                console.log(p.constraints)
+                console.log(p)
+
+                editorPrefix = p.prefix || "";
+            } catch (err) {
+                console.error("refreshProblem error:", err);
+            }
+        }
+
         async function loadProblems() {
-            const res = await fetch("/problems");
+            const res = await fetch("/problems", { cache: "no-store" });
             const problems = await res.json();
             problemSelect.innerHTML = "";
             problems.forEach(p => {
@@ -327,6 +329,10 @@
                 opt.textContent = p.title || `Problem ${p.id}`;
                 problemSelect.appendChild(opt);
             });
+            if (problems.length > 0) {
+                problemSelect.value = problems[0].id;
+                refreshProblem(problems[0].id);
+            }
         }
         loadProblems();
 
@@ -344,7 +350,7 @@
 
         runButton.addEventListener("click", async () => {
             runButton.disabled = true;
-            runButton.textContent = "Running submission...";
+            runButton.textContent = "Ажиллуулж байна...";
             resultsBody.innerHTML = "";
             tracebackDiv.style.display = "none";
             tracebackDiv.textContent = "";
@@ -388,7 +394,7 @@
                 tracebackDiv.textContent = "Failed to run code: " + err;
             } finally {
                 runButton.disabled = false;
-                runButton.textContent = "Run Code";
+                runButton.textContent = "Ажиллуулах";
             }
         });
     </script>
