@@ -80,7 +80,10 @@ def edit_problem(id):
 
                  title = request.form['title']
                  description = request.form['description']
-                 conn.execute('UPDATE problems SET title = ?, description = ? WHERE id = ?', ( title, description, id))
+                 examples = request.form['example']
+                 prefix = request.form['prefix']
+                 constraints = request.form['constraints']
+                 conn.execute('UPDATE problems SET title=? , description=?, examples=?, prefix=?, constraints=? WHERE id=?', (title, description, examples, prefix, constraints, id))
 
                  conn.commit()
                  conn.close()

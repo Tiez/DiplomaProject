@@ -3,15 +3,19 @@
 
 {% block content %}
 <h2>Problems</h2>
-
+{{ problem_id }} ID
 {% if add or edit%}
 <form method="POST">
-    <input type="text" name="title" placeholder="Problem Title" required><br>
-    <textarea name="description" placeholder="Description" rows="4" cols="50" required></textarea><br>
-    <textarea name="example" placeholder="Examples" rows="4" cols="50" required></textarea><br>
-    <textarea name="prefix" placeholder="Prefix" rows="4" cols="50" required></textarea><br>
-    <textarea name="constraints" placeholder="Constraints" rows="4" cols="50" required></textarea><br>
+
+    <input type="text" id="title" name="title" placeholder="Problem Title" required><br>
+    <textarea id="description" name="description" placeholder="Description" rows="4" cols="50" required></textarea><br>
+    <textarea id="example" name="example" placeholder="Examples" rows="4" cols="50" required></textarea><br>
+    <textarea id="prefix" name="prefix" placeholder="Prefix" rows="4" cols="50" required></textarea><br>
+    <textarea id="constraints" name="constraints" placeholder="Constraints" rows="4" cols="50" required></textarea><br>
+
     {% if add %}
+
+
     <button type="submit">Add Problem</button>
 
     {% else %}
@@ -86,4 +90,38 @@
 <h1>No Test cases </h1>
 {% endif %}
 {% endif %}
+<script>
+    window.onload = function () {
+        refreshSlots("{{ problem_id }}"); // pass problem_id from Jinja
+        console.log("aaa")
+    }
+
+    async function refreshSlots(problemId) {
+        try {
+            const res = await fetch(`/problem/${problemId}`, { cache: "no-store" });
+            if (!res.ok) throw new Error("Failed to fetch problem " + problemId);
+            const payload = await res.json();
+
+            const p = payload.problem || {};
+
+            // Get form fields
+            const title = document.getElementById("title");
+            const desc = document.getElementById("description");
+            const example = document.getElementById("example");
+            const constraints = document.getElementById("constraints");
+            const prefix = document.getElementById("prefix");
+
+            // Fill values
+            if (title) title.value = p.title || "";
+            if (desc) desc.value = p.description || "";
+            if (example) example.value = p.examples || "";
+            if (constraints) constraints.value = p.constraints || "";
+            if (prefix) prefix.value = p.prefix || "";
+
+        } catch (err) {
+            console.error("error:", err);
+        }
+    }
+
+</script>
 {% endblock %}

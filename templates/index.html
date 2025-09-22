@@ -295,9 +295,7 @@
                 let problemExamle = document.getElementById("example");
                 let problemContraints = document.getElementById("constraints");
 
-                // 
-
-                // clear
+                // Clear old data
                 problemIDLabel.textContent = "";
                 problemName.textContent = "";
                 problemDecs.textContent = "";
@@ -310,14 +308,26 @@
                 problemDecs.textContent = p.description;
                 problemContraints.textContent = p.constraints;
                 problemExamle.textContent = p.examples;
-                console.log(p.constraints)
-                console.log(p)
 
                 editorPrefix = p.prefix || "";
+
+                // --- update the editor ---
+                if (editor) {
+                    // OPTION A: always reset
+                    editor.setValue(editorPrefix || "# Write your solution here\n");
+
+                    // OPTION B: only reset if editor still has default value
+                    // let current = editor.getValue().trim();
+                    // if (current === "" || current.startsWith("def solution")) {
+                    //     editor.setValue(editorPrefix || "# Write your solution here\n");
+                    // }
+                }
+
             } catch (err) {
                 console.error("refreshProblem error:", err);
             }
         }
+
 
         async function loadProblems() {
             const res = await fetch("/problems", { cache: "no-store" });
