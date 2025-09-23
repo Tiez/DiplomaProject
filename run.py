@@ -247,7 +247,6 @@ def run_submission(user_code, problem_id, submission_id):
 
     wrapped_code = f"""
 {user_code}
-
 if __name__ == "__main__":
     import sys, json, io, contextlib, tracemalloc, time, traceback
     start_time = time.perf_counter()
