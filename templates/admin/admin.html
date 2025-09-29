@@ -1,19 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Admin Panel{% endblock %}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block style %}{% endblock %}
+    <style>
+        body {
+            background-color: #111111;
+            color: #e0e0e0;
+        }
+
+        a {
+            text-decoration: none !important;
+        }
+
+        #navButton {
+            margin: 10px;
+            color: azure;
+            background-color: #5f74ec;
+            border-radius: 6px;
+            font-size: 16px;
+            border-color: #5f74ec;
+            align-self: flex-end;
+            padding: 4px;
+        }
+    </style>
+
+
 </head>
+
 <body>
     <header>
-        <h1>Admin Panel</h1>
+
         <nav>
-            <a href="{{ url_for('adminProblem') }}">Problems</a>
-            <a href="{{ url_for('adminSubmissions') }}">Submissions</a>
-            <a href="{{ url_for('adminSystem') }}">System</a>
+            <div
+                style="font-size: 20px; font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; margin: 10px; padding: 5px; display: flex; gap: 30px; align-items: center;">
+                <div style="font-size: 30px;">Admin Panel</div> <a id="navButton" href="{{ url_for('adminProblem') }}">
+                    Problems</a>
+                <a id="navButton" href="{{ url_for('adminSubmissions') }}"> Submissions</a>
+                <a id="navButton" href="{{ url_for('adminSystem') }}"> System</a>
+            </div>
+
         </nav>
     </header>
 
@@ -21,4 +52,5 @@
         {% block content %}{% endblock %}
     </main>
 </body>
+
 </html>
