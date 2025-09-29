@@ -1,0 +1,41 @@
+{% extends "admin/admin.html" %}
+{% block title %}Submission testcases{% endblock %}
+
+{% block content %}
+<h2>Submission testcases</h2>
+
+ID: {{ subId }}<br>
+Tetst Cases
+
+<table border="1">
+    <tr>
+        <th>submissionID</th>
+        <th>input</th>
+        <th>expected</th>
+        <th>printed</th>
+        <th>output</th>
+        <th>Verdict</th>
+        <th>Error</th>
+    </tr>
+
+    {% for t in subTC %}
+    <tr>
+        <td>{{ t.ID }}</td>
+        <td>{{ t.input }}</td>
+        <td>{{ t.expected }}</td>
+        <td>{{ t.printed }}</td>
+        <td>
+            <pre>{{ t.output }}</pre>
+        </td>
+        <td>{{ t.verdict }}</td>
+        <td>
+            <pre>{{ t.error }}</pre>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+
+
+
+{% endblock %}

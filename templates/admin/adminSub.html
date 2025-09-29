@@ -18,6 +18,7 @@
         <td>Error</td>
         <td>Run time</td>
         <td>Language</td>
+        <td>Testcases</td>
 
     </tr>
     {% for s in submissions %}
@@ -39,6 +40,7 @@
         </td>
         <td>{{ s.runtime }}ms</td>
         <td>{{ s.language }}</td>
+        <td> <a href="{{ url_for('admin_SubTC', subId=s.UniqID) }}">See testcases</a> </td>
     </tr>
     {% endfor %}
 </table>

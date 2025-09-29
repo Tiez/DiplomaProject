@@ -55,17 +55,32 @@
             background-color: #111;
         }
 
+        #problem {
+            border-radius: 3px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        #problem option {
+            border-radius: 10px;
+        }
+
+
         /* Problem selector bar */
         #problem-bar {
             padding: 10px;
             background: #111;
             color: #e0e0e0;
+            border-radius: 10px;
         }
 
         /* Main container: editor + problem description */
         #main-container {
             flex: 1;
             display: flex;
+            margin: 10px;
+
             /* overflow: hidden; */
         }
 
@@ -79,6 +94,7 @@
             border-radius: 10px;
             overflow: auto;
             max-height: 706px;
+
         }
 
         /* Editor + results container */
@@ -120,6 +136,7 @@
 
         /* Results/output */
         #results-container {
+            margin-top: 5px;
             background-color: #1e1e1e;
             border-radius: 10px;
             color: #e0e0e0;
@@ -130,14 +147,13 @@
         }
 
         #traceback {
-            white-space: pre-line;
-            background: #f2f2f2;
             padding: 10px;
             margin-top: 10px;
             max-height: 200px;
             overflow-y: auto;
-            border: 1px solid #ccc;
+            border: 10px solid #ccc;
             display: none;
+            border-radius: 10px;
         }
 
         table {
@@ -149,10 +165,10 @@
 
         th,
         td {
-            border: 1px solid #ccc;
+            border: 2px solid #525252;
             padding: 6px;
             text-align: left;
-            border-radius: 5px;
+            border-radius: 1px;
         }
 
         th {

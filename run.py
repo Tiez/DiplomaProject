@@ -1,22 +1,13 @@
 import os
 import sqlite3
-import importlib.util
-import sys
-import io
+
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 import psutil
-import time
 import subprocess
 import json
-import resource
-import tracemalloc
-import math
 import queue
 import threading
 import uuid
-
-from timeout_decorator import timeout, TimeoutError
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 NUM_WORKERS = 3
 results_map = {}
@@ -45,6 +36,18 @@ def adminProblem():
     problems = conn.execute('SELECT * FROM problems').fetchall()
     conn.close()
     return render_template("admin/adminProblems.html", problems=problems)
+
+# Submission testcase answer
+@app.route("/admin/<string:subId>/testCases", methods=['GET'])
+def admin_SubTC(subId):
+
+
+    conn = get_db_connection()
+    tC = conn.execute('SELECT * FROM testcaseSub WHERE subID=? ', (subId,)).fetchall()
+    conn.close()
+    tC = [dict(row) for row in tC]
+
+    return render_template("admin/adminSubTC.html", subId=subId, subTC=tC)
 
 
 # admin add problem
@@ -117,8 +120,6 @@ def adminSystem():
 
 
     return render_template('admin/adminMonitoring.html', worker_count=NUM_WORKERS)
-
-
 
 # admin system update
 @app.route('/admin/system_data')
@@ -209,9 +210,6 @@ def delete_testcase(problem_id, testcase_id):
     conn.close()
     return redirect(url_for("admin_testcases", problem_id=problem_id))
 
-
-
-
 # Run user code
 SANDBOX_DIR = "/home/lenovo/sandbox"  # updated folder
 DOCKER_IMAGE = "python-sandbox"       # Docker image name you built
@@ -248,30 +246,30 @@ def run_submission(user_code, problem_id, submission_id):
     wrapped_code = f"""
 {user_code}
 if __name__ == "__main__":
-    import sys, json, io, contextlib, tracemalloc, time, traceback
-    start_time = time.perf_counter()
-    tracemalloc.start()
-    try:
-        args = json.loads(sys.argv[1])
-        
-        with io.StringIO() as buf, contextlib.redirect_stdout(buf):
-            returned_value = solution(*args)
-            printed_output = buf.getvalue()
-        current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-        end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
-        print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time*1000,1)}}))
-    except Exception as e:
-        end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
+        import sys, json, io, contextlib, tracemalloc, time, traceback
+        start_time = time.perf_counter()
+        tracemalloc.start()
+        try:
+            args = json.loads(sys.argv[1])
+            
+            with io.StringIO() as buf, contextlib.redirect_stdout(buf):
+                returned_value = solution(*args)
+                printed_output = buf.getvalue()
+            current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time*1000,1)}}))
+        except Exception as e:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
 
-        error_msg = traceback.format_exc()[250:]
-        
-        
+            error_msg = traceback.format_exc()[250:]
+            
+            
 
-        print(json.dumps({{"error": error_msg, "runtime": round(elapsed_time*1000,1)}}))
-"""
+            print(json.dumps({{"error": error_msg, "runtime": round(elapsed_time*1000,1)}}))
+    """
 
     with open(temp_file, "w") as f:
         f.write(wrapped_code)
@@ -354,6 +352,14 @@ if __name__ == "__main__":
                     "UPDATE submissions SET status=?, memory=?, runtime=?, error=? WHERE UniqID = ?",
                     ( "Error", databaseInsert["memory"], databaseInsert["runtime"], databaseInsert["status"], submission_id ))
                 
+                for submissionTestCase in results:
+                    print(submissionTestCase)
+                    conn.execute(
+                    "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+                    )
+
+
                 conn.commit()
                 conn.close()
 
@@ -387,6 +393,19 @@ if __name__ == "__main__":
                 "verdict": "Time Limit Exceeded",
                 "error": ""
             })
+
+            conn = get_db_connection()
+
+            for submissionTestCase in results:
+                print(submissionTestCase)
+                conn.execute(
+                "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+                )
+            
+
+            conn.commit()
+            conn.close()
             return results
 
     databaseInsert = {"status": 'Correct', "memory": 0, "runtime": 0.0}
@@ -414,6 +433,15 @@ if __name__ == "__main__":
     conn.execute(
         "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
         ( databaseInsert["status"], databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
+    
+    print("pls")
+    for submissionTestCase in results:
+        print(submissionTestCase)
+        conn.execute(
+        "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+        ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+        )
+        print("Done")
     
     conn.commit()
     conn.close()
