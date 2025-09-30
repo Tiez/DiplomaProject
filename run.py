@@ -364,7 +364,17 @@ if __name__ == "__main__":
                 conn.close()
 
 
-
+                file_to_delete = "../sandbox/temp_" + submission_id + ".py"
+                try:
+                    os.remove(file_to_delete)
+                    print(f"File '{file_to_delete}' deleted successfully.")
+                except FileNotFoundError:
+                    print(f"Error: File '{file_to_delete}' not found.")
+                except PermissionError:
+                    print(f"Error: Permission denied to delete '{file_to_delete}'.")
+                except Exception as e:
+                    print(f"An unexpected error occurred: {e}")
+                    # print(jsonify(results))
 
                 return results
             else:
@@ -406,6 +416,19 @@ if __name__ == "__main__":
 
             conn.commit()
             conn.close()
+
+            file_to_delete = "../sandbox/temp_" + submission_id + ".py"
+            try:
+                os.remove(file_to_delete)
+                print(f"File '{file_to_delete}' deleted successfully.")
+            except FileNotFoundError:
+                print(f"Error: File '{file_to_delete}' not found.")
+            except PermissionError:
+                print(f"Error: Permission denied to delete '{file_to_delete}'.")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                # print(jsonify(results))
+
             return results
 
     databaseInsert = {"status": 'Correct', "memory": 0, "runtime": 0.0}
