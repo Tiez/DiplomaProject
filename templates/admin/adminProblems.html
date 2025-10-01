@@ -3,6 +3,84 @@
 
 {% block style %}
 <style>
+    /* Form container */
+    #formContainer {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background-color: #2a2a2a;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        max-width: 700px;
+        margin: 20px auto
+    }
+
+    /* Labels */
+    #formContainer label {
+        font-family: 'Lucida Sans', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: #f0f0f0;
+        margin-bottom: 4px;
+    }
+
+    /* Inputs and textareas */
+    .textSection {
+        border-radius: 8px;
+        background-color: #1e1e1e;
+        color: #f0f0f0;
+        border: 1px solid #444;
+        padding: 10px;
+        font-size: 14px;
+        font-family: 'Lucida Sans', sans-serif;
+        transition: border 0.2s, box-shadow 0.2s;
+        width: 97%;
+        resize: none;
+    }
+
+    .textSection:focus {
+        outline: none;
+        border: 1px solid #2d8521;
+        box-shadow: 0 0 8px rgba(45, 133, 33, 0.5);
+        background-color: #262626;
+    }
+
+    /* Buttons */
+    #formContainer button {
+        background-color: #2d8521;
+        color: #fff;
+        padding: 10px 16px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+
+    #formContainer button:hover {
+        background-color: #1f5e17;
+        transform: translateY(-2px);
+    }
+
+    /* Placeholders */
+    .textSection::placeholder {
+        color: #aaa;
+        font-style: italic;
+    }
+
+    /* Responsive for smaller screens */
+    @media screen and (max-width: 768px) {
+        #formContainer {
+            width: 90%;
+            padding: 15px;
+        }
+
+        #formContainer button {
+            font-size: 14px;
+        }
+    }
+
     #searchButton {
         background-color: #1e1e1e;
         color: aliceblue;
@@ -35,7 +113,7 @@
     /* Header row */
     #header {
         display: grid;
-        grid-template-columns: 1fr 2fr 2fr 3fr 2fr;
+        grid-template-columns: 0.2fr 2fr 6fr 1fr 1fr;
         align-items: center;
         gap: 10px;
         background-color: #2a2a2a;
@@ -50,7 +128,7 @@
     /* Each row */
     #listItem {
         display: grid;
-        grid-template-columns: 1fr 2fr 2fr 3fr 2fr;
+        grid-template-columns: 0.2fr 2fr 6fr 1fr 1fr;
         align-items: center;
         gap: 10px;
         background-color: #1e1e1e;
@@ -117,8 +195,30 @@
     }
 
     button {
-        box-shadow: none;
         border: none;
+    }
+
+    .difficulty {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: bold;
+        text-align: center;
+        width: fit-content;
+    }
+
+    .easy {
+        color: #2d8521;
+        /* green */
+    }
+
+    .medium {
+        color: #f0a500;
+        /* orange */
+    }
+
+    .hard {
+        color: #852121;
+        /* red */
     }
 </style>
 {% endblock %}
@@ -126,25 +226,50 @@
 {% block content %}
 <div style="margin: 10px;">
     {% if add or edits %}
-    ID {{ problem_id }}
+
 
     <form method="POST">
-        <input type="text" id="title" name="title" placeholder="Problem Title"
-            value="{{ problem.title if problem else '' }}" required><br>
-        <textarea id="description" name="description" placeholder="Description" rows="4" cols="50"
-            required>{{ problem.description if problem else '' }}</textarea><br>
-        <textarea id="example" name="example" placeholder="Examples" rows="4" cols="50"
-            required>{{ problem.examples if problem else '' }}</textarea><br>
-        <textarea id="prefix" name="prefix" placeholder="Prefix" rows="4" cols="50"
-            required>{{ problem.prefix if problem else '' }}</textarea><br>
-        <textarea id="constraints" name="constraints" placeholder="Constraints" rows="4" cols="50"
-            required>{{ problem.constraints if problem else '' }}</textarea><br>
+        <div id="formContainer">
+            <label>
+                Title | ID {{ problem_id }}
+            </label>
+            <input class="textSection" type="text" id="title" name="title" placeholder="Problem Title"
+                value="{{ problem.title if problem else '' }}" required>
+            <label>
+                Description
+            </label>
+            <textarea class="textSection" id="description" name="description" placeholder="Description" rows="4"
+                cols="50" required></textarea>
+            <label>
+                Example
+            </label>
+            <textarea class="textSection" id="example" name="example" placeholder="Examples" rows="4" cols="50"
+                required></textarea>
+            <label>
+                Prefix
+            </label>
+            <textarea class="textSection" id="prefix" name="prefix" placeholder="Prefix" rows="4" cols="50"
+                required></textarea>
+            <label>
+                Constraints
+            </label>
+            <textarea class="textSection" id="constraints" name="constraints" placeholder="Constraints" rows="4"
+                cols="50" required></textarea>
 
-        {% if add %}
-        <button type="submit">Add Problem</button>
-        {% else %}
-        <button type="submit">Edit Problem</button><br>
-        {% endif %}
+            <div style="display: flex; flex-direction: row; margin: 10px;">
+                <label>Easy</label>
+                <input type="radio" name="diff" style="margin-bottom:6px;" value="Easy" id="diff">
+                <label>Medium</label>
+                <input type="radio" name="diff" style="margin-bottom:6px;" value="Medium" id="diff">
+                <label>Hard</label>
+                <input type="radio" name="diff" style="margin-bottom:6px;" value="Hard" id="diff">
+            </div>
+            {% if add %}
+            <button type="submit">Add Problem</button>
+            {% else %}
+            <button type="submit">Edit Problem</button>
+            {% endif %}
+        </div>
     </form>
 
 
@@ -171,8 +296,9 @@
     <div id="header">
         <div class="ID">ID</div>
         <div class="TITLE">Title</div>
-        <div class="EXP">Examples</div>
+
         <div class="DESC">Description</div>
+        <div class="DESC">Difficulty</div>
         <div class="ACT">Actions</div>
     </div>
 
@@ -181,9 +307,11 @@
         <div id="listItem">
             <div class="ID">{{ p.id }}</div>
             <div class="TITLE">{{ p.title }}</div>
-            <div class="EXP">{{ p.examples }}</div>
             <div class="DESC">{{ p.description }}</div>
-            <div class="actions">
+            <div
+                class="difficulty {% if p.diff == 'Easy' %}easy{% elif p.diff == 'Medium' %}medium{% elif p.diff == 'Hard' %}hard{% endif %}">
+                {{ p.diff | capitalize }}</div>
+            <div class=" actions">
                 <a id="edit" href="{{ url_for('edit_problem', id=p.id) }}">Edit</a>
                 <a id="del" href="{{ url_for('delete_problem', id=p.id) }}">Delete</a>
             </div>
@@ -197,44 +325,46 @@
 
 
 {% if edits %}
-<h1>Problem Testcases</h1>
-{% if not testcases[0] %}
-{{id}}
-{{testcases}}
-<a href="{{ url_for('admin_testcases', problem_id=problem_id) }}">Add test case</a>
+<div>
+    <h1>Problem Testcases</h1>
+    {% if not testcases[0] %}
+    {{id}}
+    {{testcases}}
+    <a href="{{ url_for('admin_testcases', problem_id=problem_id) }}">Add test case</a>
 
-{% else %}
-<a href="{{ url_for('admin_testcases', problem_id=testcases[0]['problem_id']) }}">Add test case</a>
+    {% else %}
+    <a href="{{ url_for('admin_testcases', problem_id=testcases[0]['problem_id']) }}">Add test case</a>
+    {% endif %}
+
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Input</th>
+            <th>Output</th>
+        </tr>
+        {% for t in testcases %}
+        <tr>
+            <td>{{t.id}}</td>
+            <td>{{t.input}}</td>
+            <td>{{t.expected}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% if not testcases %}
+    <h1>No Test cases </h1>
+</div>
 {% endif %}
 
-<table border="1">
-    <tr>
-        <th>ID</th>
-        <th>Input</th>
-        <th>Output</th>
-    </tr>
-    {% for t in testcases %}
-    <tr>
-        <td>{{t.id}}</td>
-        <td>{{t.input}}</td>
-        <td>{{t.expected}}</td>
-    </tr>
-    {% endfor %}
-</table>
-{% if not testcases %}
-<h1>No Test cases </h1>
+
+
+
+
+
+
+
+
+
 {% endif %}
-
-
-
-
-
-
-
-
-
-
-
 
 <script>
 
@@ -242,7 +372,10 @@
         refreshSlots("{{ problem_id }}"); // pass problem_id from Jinja
 
     }
+
+
     document.getElementById("searchButton").addEventListener("click", function (e) {
+
         e.preventDefault(); // prevent refresh
 
         let query = document.getElementById("searchBar").value.toLowerCase();
@@ -262,6 +395,7 @@
     async function refreshSlots(problemId) {
         try {
 
+
             const res = await fetch(`/problem/${problemId}`, { cache: "no-store" });
             if (!res.ok) throw new Error("Failed to fetch problem " + problemId);
             const payload = await res.json();
@@ -273,6 +407,12 @@
             const example = document.getElementById("example");
             const constraints = document.getElementById("constraints");
             const prefix = document.getElementById("prefix");
+            const diff = p.diff;
+            if (diff) {
+                const radio = document.querySelector(`input[name="diff"][value="${diff}"]`);
+                if (radio) radio.checked = true;
+                console.log(diff)
+            }
 
             // Fill values
             if (title) title.value = p.title || "";
@@ -281,10 +421,12 @@
             if (constraints) constraints.value = p.constraints || "";
             if (prefix) prefix.value = p.prefix || "";
 
+
+
         } catch (err) {
             console.error("error:", err);
         }
     }
 </script>
-{% endif %}
+
 {% endblock %}

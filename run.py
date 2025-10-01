@@ -35,7 +35,6 @@ def adminProblem():
     conn = get_db_connection()
     problems = conn.execute('SELECT * FROM problems').fetchall()
     conn.close()
-    
     return render_template("admin/adminProblems.html", problems=problems)
 
 # Submission testcase answer
@@ -77,6 +76,8 @@ def edit_problem(id):
     testcases = [dict(row) for row in conn.execute('SELECT * FROM test_cases WHERE problem_id = ?', (id,)).fetchall()]
 
     if request.method == "POST":
+
+
          for problem in problems:
              if problem['id'] == id:
 
@@ -85,7 +86,8 @@ def edit_problem(id):
                  examples = request.form['example']
                  prefix = request.form['prefix']
                  constraints = request.form['constraints']
-                 conn.execute('UPDATE problems SET title=? , description=?, examples=?, prefix=?, constraints=? WHERE id=?', (title, description, examples, prefix, constraints, id))
+                 diff = request.form['diff']
+                 conn.execute('UPDATE problems SET title=? , description=?, examples=?, prefix=?, constraints=?, diff=? WHERE id=?', (title, description, examples, prefix, constraints,diff, id))
 
                  conn.commit()
                  conn.close()
