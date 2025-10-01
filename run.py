@@ -59,9 +59,10 @@ def add_problem():
         examples = request.form['example']
         prefix = request.form['prefix']
         constraints = request.form['constraints']
+        diff = request.form['diff']
         conn = get_db_connection()
-        conn.execute('INSERT INTO problems (title, description, examples, prefix, constraints) VALUES (?, ?, ?, ?, ?)',
-                     (title, description, examples, prefix, constraints))
+        conn.execute('INSERT INTO problems (title, description, examples, prefix, constraints, diff) VALUES (?, ?, ?, ?, ?, ?)',
+                     (title, description, examples, prefix, constraints, diff))
         conn.commit()
         conn.close()
         return redirect(url_for('adminProblem'))
