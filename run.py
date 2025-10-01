@@ -35,6 +35,7 @@ def adminProblem():
     conn = get_db_connection()
     problems = conn.execute('SELECT * FROM problems').fetchall()
     conn.close()
+    
     return render_template("admin/adminProblems.html", problems=problems)
 
 # Submission testcase answer
@@ -76,8 +77,6 @@ def edit_problem(id):
     testcases = [dict(row) for row in conn.execute('SELECT * FROM test_cases WHERE problem_id = ?', (id,)).fetchall()]
 
     if request.method == "POST":
-
-
          for problem in problems:
              if problem['id'] == id:
 
@@ -93,7 +92,7 @@ def edit_problem(id):
                  return(redirect(url_for('adminProblem')))
                  break
 
-    return render_template('admin/adminProblems.html',testcases=testcases,problem_id=id, edit=True)
+    return render_template('admin/adminProblems.html',testcases=testcases,problem_id=id, edits=True)
 
 # admin delete problem
 @app.route('/admin/problems/delete/<int:id>')
