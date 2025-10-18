@@ -313,6 +313,40 @@ if __name__ == "__main__":
 
 
                     continue
+            print("=====================")
+            print(completed)
+
+            #Memory Limit Error
+            if completed.returncode == 137:
+                results.append({
+                    "input": args,
+                    "expected": json.loads(case["expected"]),
+                    "output": None,
+                    "printed": "",
+                    "verdict": "Memory Limit",
+                    "error": ""
+                })
+
+                databaseInsert = {"memory": "Exceeded", "runtime": 0.0}
+
+                conn = get_db_connection()
+                conn.execute(
+                    "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
+                    ( "Memory Limit", databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
+                
+                for submissionTestCase in results:
+                    print(submissionTestCase)
+                    conn.execute(
+                    "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+                    )
+
+
+                conn.commit()
+                conn.close()
+                return results
+
+
             if not output_json:
                
                 stdout_lines = " \n".join(stdout_lines)
@@ -411,7 +445,7 @@ if __name__ == "__main__":
 
             conn.execute(
             "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
-            ( "Time Limit", "0", "", submission_id ))
+            ( "Time Limit", "0.0", "", submission_id ))
 
             for submissionTestCase in results:
                 print("what???")
