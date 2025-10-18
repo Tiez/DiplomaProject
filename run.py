@@ -289,7 +289,7 @@ if __name__ == "__main__":
         try:
             args = json.loads(case["input"])
             docker_cmd = [
-                "docker", "run", "--rm",
+                "docker", "run", "--memory=100m",  "--rm",
                 "-v", f"{SANDBOX_DIR}:/app",
                 DOCKER_IMAGE,
                 "python3", f"/app/{os.path.basename(temp_file)}",
@@ -405,10 +405,17 @@ if __name__ == "__main__":
                 "verdict": "Time Limit Exceeded",
                 "error": ""
             })
-
+            print("===================================================")
+            print(results)
             conn = get_db_connection()
 
+            conn.execute(
+            "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
+            ( "Time Limit", "0", "", submission_id ))
+
             for submissionTestCase in results:
+                print("what???")
+
                 print(submissionTestCase)
                 conn.execute(
                 "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
