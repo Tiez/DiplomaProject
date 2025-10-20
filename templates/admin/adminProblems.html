@@ -3,6 +3,49 @@
 
 {% block style %}
 <style>
+    /* Testcase header row */
+    #header-testcase {
+        display: grid;
+        grid-template-columns: 0.2fr 1.5fr 1.5fr;
+        align-items: center;
+        gap: 10px;
+        background-color: #2a2a2a;
+        color: #e6e6e6;
+        font-weight: bold;
+        margin: 20px 0 0;
+        padding: 10px;
+        border-radius: 12px 12px 0 0;
+        font-family: 'Lucida Sans', sans-serif;
+    }
+
+    /* Each testcase row */
+    #listItem-testcase {
+        display: grid;
+        grid-template-columns: 0.2fr 1.5fr 1.5fr;
+        align-items: center;
+        gap: 10px;
+        background-color: #1e1e1e;
+        color: #ddd;
+        padding: 10px;
+        margin: 0 0 4px;
+        border-radius: 3px;
+    }
+
+    /* Scrollable container if many testcases */
+    #list-container-testcase {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    /* Preserve formatting inside pre tags */
+    #listItem-testcase pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        margin: 0;
+        font-family: monospace;
+        color: #f0f0f0;
+    }
+
     /* Form container */
     #formContainer {
         display: flex;
@@ -227,53 +270,83 @@
 <div style="margin: 10px;">
     {% if add or edits %}
 
+    <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
+        <!-- Problem Edit Form -->
+        <form method="POST" style="flex: 2; min-width: 300px;">
+            <div id="formContainer">
+                <label>Title | ID {{ problem_id }}</label>
+                <input class="textSection" type="text" id="title" name="title" placeholder="Problem Title"
+                    value="{{ problem.title if problem else '' }}" required>
 
-    <form method="POST">
-        <div id="formContainer">
-            <label>
-                Title | ID {{ problem_id }}
-            </label>
-            <input class="textSection" type="text" id="title" name="title" placeholder="Problem Title"
-                value="{{ problem.title if problem else '' }}" required>
-            <label>
-                Description
-            </label>
-            <textarea class="textSection" id="description" name="description" placeholder="Description" rows="4"
-                cols="50" required></textarea>
-            <label>
-                Example
-            </label>
-            <textarea class="textSection" id="example" name="example" placeholder="Examples" rows="4" cols="50"
-                required></textarea>
-            <label>
-                Prefix
-            </label>
-            <textarea class="textSection" id="prefix" name="prefix" placeholder="Prefix" rows="4" cols="50"
-                required></textarea>
-            <label>
-                Constraints
-            </label>
-            <textarea class="textSection" id="constraints" name="constraints" placeholder="Constraints" rows="4"
-                cols="50" required></textarea>
+                <label>Description</label>
+                <textarea class="textSection" id="description" name="description" placeholder="Description" rows="4"
+                    required></textarea>
 
-            <div style="display: flex; flex-direction: row; margin: 10px;">
-                <label>Easy</label>
-                <input type="radio" name="diff" style="margin-bottom:6px;" value="Easy" id="diff">
-                <label>Medium</label>
-                <input type="radio" name="diff" style="margin-bottom:6px;" value="Medium" id="diff">
-                <label>Hard</label>
-                <input type="radio" name="diff" style="margin-bottom:6px;" value="Hard" id="diff">
+                <label>Example</label>
+                <textarea class="textSection" id="example" name="example" placeholder="Examples" rows="4"
+                    required></textarea>
+
+                <label>Prefix</label>
+                <textarea class="textSection" id="prefix" name="prefix" placeholder="Prefix" rows="4"
+                    required></textarea>
+
+                <label>Constraints</label>
+                <textarea class="textSection" id="constraints" name="constraints" placeholder="Constraints" rows="4"
+                    required></textarea>
+
+                <div style="display: flex; gap: 10px; margin: 10px 0;">
+                    <label>Easy</label>
+                    <input type="radio" name="diff" value="Easy">
+                    <label>Medium</label>
+                    <input type="radio" name="diff" value="Medium">
+                    <label>Hard</label>
+                    <input type="radio" name="diff" value="Hard">
+                </div>
+
+                {% if add %}
+                <button type="submit">Add Problem</button>
+                {% else %}
+                <button type="submit">Edit Problem</button>
+                {% endif %}
             </div>
-            {% if add %}
-            <button type="submit">Add Problem</button>
+        </form>
+
+        <!-- Testcase Table -->
+        {% if edits %}
+        <div style="flex: 1; min-width: 300px;">
+            <h1>Problem Testcases</h1>
+
+            {% if testcases %}
+            <a class="add-btn" href="{{ url_for('admin_testcases', problem_id=testcases[0]['problem_id']) }}">Add
+                Testcase</a>
+
+            <div id="header-testcase">
+                <div class="ID">ID</div>
+                <div class="DESC">Input</div>
+                <div class="DESC">Output</div>
+            </div>
+
+            <div id="list-container-testcase">
+                {% for t in testcases %}
+                <div id="listItem-testcase">
+                    <div class="ID">{{ t.id }}</div>
+                    <div class="DESC">
+                        <pre>{{ t.input }}</pre>
+                    </div>
+                    <div class="DESC">
+                        <pre>{{ t.expected }}</pre>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
             {% else %}
-            <button type="submit">Edit Problem</button>
+            <h2>No Testcases</h2>
+            <a class="add-btn" href="{{ url_for('admin_testcases', problem_id=problem_id) }}">Add Testcase</a>
             {% endif %}
         </div>
-    </form>
-
-
-
+        {% endif %}
+    </div>
 
     {% endif %}
 
@@ -324,47 +397,7 @@
 {% endif %}
 
 
-{% if edits %}
-<div>
-    <h1>Problem Testcases</h1>
-    {% if not testcases[0] %}
-    {{id}}
-    {{testcases}}
-    <a href="{{ url_for('admin_testcases', problem_id=problem_id) }}">Add test case</a>
 
-    {% else %}
-    <a href="{{ url_for('admin_testcases', problem_id=testcases[0]['problem_id']) }}">Add test case</a>
-    {% endif %}
-
-    <table border="1">
-        <tr>
-            <th>ID</th>
-            <th>Input</th>
-            <th>Output</th>
-        </tr>
-        {% for t in testcases %}
-        <tr>
-            <td>{{t.id}}</td>
-            <td>{{t.input}}</td>
-            <td>{{t.expected}}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% if not testcases %}
-    <h1>No Test cases </h1>
-</div>
-{% endif %}
-
-
-
-
-
-
-
-
-
-
-{% endif %}
 
 <script>
 
