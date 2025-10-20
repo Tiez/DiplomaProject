@@ -401,8 +401,8 @@
 
                 results.forEach(r => {
                     const row = document.createElement("tr");
-                    if (r.verdict === "Correct!") row.className = "correct";
-                    else if (r.verdict === "Wrong!") row.className = "wrong";
+                    if (r.verdict === "correct") row.className = "correct";
+                    else if (r.verdict === "wrong") row.className = "wrong";
                     else row.className = "error";
 
                     row.innerHTML = `

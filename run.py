@@ -203,9 +203,30 @@ def edit_testcase(problem_id, testcase_id):
     conn.close()
     return redirect(url_for("admin_testcases", problem_id=problem_id))
 
+@app.route("/admin/problem/<int:problem_id>/update_all_testcases", methods=["POST"])
+def update_all_testcases(problem_id):
+    print("====================================")
+    conn = get_db_connection()
+    tcs = conn.execute("SELECT id FROM test_cases WHERE problem_id = ?", (problem_id,)).fetchall()
+    for tc in tcs:
+        tc_id = tc["id"]
+        input_data = request.form.get(f"input_{tc_id}")
+        expected_output = request.form.get(f"expected_{tc_id}")
+        if input_data is not None and expected_output is not None:
+            conn.execute(
+                "UPDATE test_cases SET input = ?, expected = ? WHERE id = ?",
+                (input_data, expected_output, tc_id)
+            )
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin_testcases", problem_id=problem_id))
+
+
 # Delete testcase 
 @app.route("/admin/problem/<int:problem_id>/testcases/<int:testcase_id>/delete", methods=["POST"])
 def delete_testcase(problem_id, testcase_id):
+    print("delete")
+    print(problem_id, testcase_id)
     conn = get_db_connection()
     conn.execute("DELETE FROM test_cases WHERE id = ?", (testcase_id,))
     conn.commit()
@@ -417,7 +438,7 @@ if __name__ == "__main__":
                 returned_value = output_json.get("return")
                 printed_output = output_json.get("printed", "")
                 expected_value = json.loads(case["expected"])
-                verdict = "Correct!" if returned_value == expected_value else "Wrong!"
+                verdict = "correct" if returned_value == expected_value else "wrong"
 
                 error_message = ""
 
@@ -474,15 +495,15 @@ if __name__ == "__main__":
 
             return results
 
-    databaseInsert = {"status": 'Correct', "memory": 0, "runtime": 0.0}
+    databaseInsert = {"status": 'correct', "memory": 0, "runtime": 0.0}
 
     for result in results:
         if result["error"] != '':
             databaseInsert["status"] = "Error"
         elif result["verdict"] == "Time Limit Exceeded":
             databaseInsert["status"] = "Time Limit"
-        elif result["verdict"] == "Wrong!":
-            databaseInsert["status"] = "Wrong"
+        elif result["verdict"] == "wrong":
+            databaseInsert["status"] = "wrong"
 
 
             

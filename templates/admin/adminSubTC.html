@@ -1,41 +1,233 @@
 {% extends "admin/admin.html" %}
-{% block title %}Submission testcases{% endblock %}
+{% block title %}Submission Testcases{% endblock %}
+
+{% block style %}
+<style>
+    /* Container */
+    #subtc-container {
+        max-width: 95%;
+        margin: 20px auto;
+        font-family: 'Lucida Sans', sans-serif;
+        overflow-x: auto;
+    }
+
+    /* Header row */
+    #subtc-header {
+        display: grid;
+        grid-template-columns: 0.5fr 1fr 1.2fr 1.2fr 1.2fr 1fr 1fr 1fr;
+        align-items: center;
+        padding: 10px;
+        gap: 10px;
+        background-color: #2a2a2a;
+        color: #e6e6e6;
+        font-weight: bold;
+        border-radius: 12px 12px 0 0;
+    }
+
+    /* Each testcase row */
+    .subtc-row {
+        display: grid;
+        grid-template-columns: 0.5fr 1fr 1.2fr 1.2fr 1.2fr 1fr 1fr 1fr;
+        gap: 10px;
+        background-color: #1e1e1e;
+        color: #ddd;
+        margin-bottom: 2px;
+        border-radius: 6px;
+        padding: 10px;
+        transition: all 0.3s ease;
+        align-items: start;
+    }
+
+    /* Input, output, printed, and error boxes */
+    .tc-input,
+    .tc-expected,
+    .tc-printed,
+    .tc-output,
+    .tc-error {
+        position: relative;
+        max-height: 100px;
+        overflow: hidden;
+        border-radius: 6px;
+    }
+
+    .tc-input pre,
+    .tc-expected pre,
+    .tc-printed pre,
+    .tc-output pre,
+    .tc-error pre {
+        margin: 0;
+        font-size: 13px;
+        background-color: #262626;
+        padding: 6px;
+        border-radius: 6px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .tc-input::after,
+    .tc-expected::after,
+    .tc-printed::after,
+    .tc-output::after,
+    .tc-error::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 30px;
+
+        pointer-events: none;
+    }
+
+    /* Dropdown for full data */
+    .dropdown-panel {
+        display: none;
+        background-color: #262626;
+        color: #fff;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-x: auto;
+        grid-column: 1 / -1;
+        margin-top: 10px;
+    }
+
+    /* Buttons */
+    .expand-btn {
+        background-color: #2d8521;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 14px;
+        cursor: pointer;
+        grid-column: 1 / -1;
+        margin-top: 6px;
+    }
+
+    .expand-btn:hover {
+        background-color: #1f5e17;
+    }
+
+    .dis-expand-btn {
+        background-color: #929791;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 14px;
+        cursor: pointer;
+        grid-column: 1 / -1;
+        margin-top: 6px;
+    }
+
+    /* Verdict colors */
+    .verdict-correct {
+        color: #2d8521;
+        font-weight: bold;
+    }
+
+    .verdict-wrong {
+        color: #852121;
+        font-weight: bold;
+    }
+
+    .verdict-error {
+        color: #f0a500;
+        font-weight: bold;
+    }
+
+    /* Responsive */
+    @media screen and (max-width: 1024px) {
+
+        #subtc-header,
+        .subtc-row {
+            grid-template-columns: 0.5fr 1fr 1fr 1fr 1fr 1fr;
+        }
+    }
+
+    @media screen and (max-width: 768px) {
+
+        #subtc-header,
+        .subtc-row {
+            grid-template-columns: 1fr 1fr 1fr;
+            font-size: 13px;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2>Submission testcases</h2>
+<div id="subtc-container">
+    <h2>Submission Testcases for ID: {{ subId }}</h2>
 
-ID: {{ subId }}<br>
-Tetst Cases
-
-<table border="1">
-    <tr>
-        <th>submissionID</th>
-        <th>input</th>
-        <th>expected</th>
-        <th>printed</th>
-        <th>output</th>
-        <th>Verdict</th>
-        <th>Error</th>
-    </tr>
+    <div id="subtc-header">
+        <div>ID</div>
+        <div>Input</div>
+        <div>Expected</div>
+        <div>Printed</div>
+        <div>Output</div>
+        <div>Verdict</div>
+        <div>Error</div>
+        <div>Actions</div>
+    </div>
 
     {% for t in subTC %}
-    <tr>
-        <td>{{ t.ID }}</td>
-        <td>{{ t.input }}</td>
-        <td>{{ t.expected }}</td>
-        <td>{{ t.printed }}</td>
-        <td>
+    <div class="subtc-row" id="row-{{ t.ID }}">
+        <div>{{ t.ID }}</div>
+
+        <div class="tc-input">
+            <pre>{{ t.input }}</pre>
+        </div>
+        <div class="tc-expected">
+            <pre>{{ t.expected }}</pre>
+        </div>
+        <div class="tc-printed">
+            <pre>{{ t.printed }}</pre>
+        </div>
+        <div class="tc-output">
             <pre>{{ t.output }}</pre>
-        </td>
-        <td>{{ t.verdict }}</td>
-        <td>
+        </div>
+
+        <div class="verdict-{{ t.verdict|lower|replace(' ', '-') }}">{{ t.verdict }}</div>
+
+        <div class="tc-error">
             <pre>{{ t.error }}</pre>
-        </td>
-    </tr>
+        </div>
+
+        <div>
+            <button class="expand-btn" onclick="toggleDropdown('{{ t.ID }}', this)">Show full details</button>
+        </div>
+
+        <div class="dropdown-panel" id="dropdown-{{ t.ID }}">
+            <strong>Full Input:</strong>
+            <pre>{{ t.input }}</pre>
+            <strong>Expected Output:</strong>
+            <pre>{{ t.expected }}</pre>
+            <strong>Printed Output:</strong>
+            <pre>{{ t.printed }}</pre>
+            <strong>Actual Output:</strong>
+            <pre>{{ t.output }}</pre>
+            <strong>Error Message:</strong>
+            <pre>{{ t.error }}</pre>
+        </div>
+    </div>
     {% endfor %}
-</table>
+</div>
 
-
-
-
+<script>
+    function toggleDropdown(tcId, btn) {
+        const panel = document.getElementById('dropdown-' + tcId);
+        if (panel.style.display === 'block') {
+            panel.style.display = 'none';
+            btn.textContent = 'Show full details';
+        } else {
+            panel.style.display = 'block';
+            btn.textContent = 'Hide full details';
+        }
+    }
+</script>
 {% endblock %}

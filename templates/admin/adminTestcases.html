@@ -1,37 +1,220 @@
-{% extends "admin/admin.html"%}
-{% block title %} Test cases {% endblock %}
+{% extends "admin/admin.html" %}
+{% block title %}Testcases{% endblock %}
+
+{% block style %}
+<style>
+    #tc-container {
+        max-width: 95%;
+        margin: 20px auto;
+        font-family: 'Lucida Sans', sans-serif;
+        color: #ddd;
+    }
+
+    h1,
+    h2 {
+        color: #e6e6e6;
+        margin-bottom: 12px;
+    }
+
+    /* Add form */
+    #add-tc-form {
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    #add-tc-form label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+
+    #add-tc-form input[type="text"] {
+        width: 100%;
+        background-color: #262626;
+        color: #fff;
+        border: 1px solid #444;
+        border-radius: 6px;
+        padding: 8px;
+        margin-bottom: 10px;
+    }
+
+    #add-tc-form button {
+        background-color: #2d8521;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background 0.2s;
+    }
+
+    #add-tc-form button:hover {
+        background-color: #1f5e17;
+    }
+
+    /* Testcase table layout */
+    #tc-header {
+        display: grid;
+        grid-template-columns: 0.5fr 2fr 2fr 1fr;
+        background-color: #2a2a2a;
+        padding: 10px;
+        border-radius: 12px 12px 0 0;
+        color: #e6e6e6;
+        font-weight: bold;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .tc-row {
+        display: grid;
+        grid-template-columns: 0.5fr 2fr 2fr 1fr;
+        background-color: #1e1e1e;
+        padding: 10px;
+        border-radius: 6px;
+        margin-top: 4px;
+        gap: 30px;
+        align-items: center;
+        transition: background 0.3s ease;
+    }
+
+    .tc-row:hover {
+        background-color: #242424;
+    }
+
+    .tc-row input[type="text"] {
+        width: 100%;
+        background-color: #262626;
+        color: #fff;
+        border: 1px solid #444;
+        border-radius: 6px;
+        padding: 6px;
+        font-size: 14px;
+    }
+
+    .tc-actions button {
+        border: none;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-weight: bold;
+        color: #fff;
+        margin-left: 4px;
+        transition: all 0.2s;
+    }
+
+    .btn-update-all {
+        background-color: #2d8521;
+        padding: 10px 18px;
+        margin-top: 15px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #fff;
+    }
+
+    .btn-update-all:hover {
+        background-color: #1f5e17;
+    }
+
+    .btn-delete {
+        background-color: #852121;
+    }
+
+    .btn-delete:hover {
+        background-color: #611616;
+    }
+
+    .no-tc {
+        text-align: center;
+        padding: 20px;
+        background-color: #1e1e1e;
+        border-radius: 6px;
+        margin-top: 10px;
+    }
+
+    .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        text-decoration: none;
+        color: #2d8521;
+        font-weight: bold;
+        transition: color 0.2s;
+    }
+
+    .back-link:hover {
+        color: #1f5e17;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h1>Testcases for Problem: {{ problem['title'] }}</h1>
-<h1>ID: {{problem['id']}}</h1>
+<div id="tc-container">
+    <h1>Testcases for Problem: {{ problem['title'] }}</h1>
+    <h2>Problem ID: {{ problem['id'] }}</h2>
 
-    <h2>Add New Testcase</h2>
-    <form method="post" action="{{ url_for('add_testcase', problem_id=problem['id']) }}">
-        <label>Input:</label><br>
-        <input type="text" name="input_data" required><br>
-        <label>Expected Output:</label><br>
-        <input type="text" name="expected_output" required><br>
-        <button type="submit">Add Testcase</button>
-    </form>
+    <!-- Add new testcase -->
+    <div id="add-tc-form">
+        <h2>Add New Testcase</h2>
+        <form method="post" action="{{ url_for('add_testcase', problem_id=problem['id']) }}">
+            <label>Input:</label>
+            <input type="text" name="input_data" required>
 
-    <h2>Existing Testcases</h2>
-    <ul>
+            <label>Expected Output:</label>
+            <input type="text" name="expected_output" required>
+
+            <button type="submit">Add Testcase</button>
+        </form>
+    </div>
+
+    <!-- Update all testcases -->
+    {% if testcases %}
+    <form method="post" action="{{ url_for('update_all_testcases', problem_id=problem['id']) }}">
+        <div id="tc-header">
+            <div>ID</div>
+            <div>Input</div>
+            <div>Expected Output</div>
+            <div>Actions</div>
+        </div>
+
         {% for tc in testcases %}
-        <li>
-            <form method="post" action="{{ url_for('edit_testcase', problem_id=problem['id'], testcase_id=tc['id']) }}">
-                <input type="text" name="input_data" value="{{ tc['input'] }}" required >
-                <input type="text" name="expected_output" value="{{ tc['expected'] }}" required>
-                <button type="submit">Update</button>
-            </form>
+        <div class="tc-row" data-id="{{ tc['id'] }}">
+            <div>{{ tc['id'] }}</div>
+            <input type="text" name="input_{{ tc['id'] }}" value="{{ tc['input'] }}" required>
+            <input type="text" name="expected_{{ tc['id'] }}" value="{{ tc['expected'] }}" required>
 
-            <form method="post" action="{{ url_for('delete_testcase', problem_id=problem['id'], testcase_id=tc['id']) }}" style="display:inline;">
-                <button type="submit">Delete</button>
-            </form>
-        </li>
-        {% else %}
-        <li>No testcases yet.</li>
+            <div class="tc-actions">
+                <button type="button" class="btn-delete" onclick="deleteTestcase({{ tc['id'] }})">Delete</button>
+            </div>
+        </div>
         {% endfor %}
-    </ul>
 
-    <p><a href="{{ url_for('edit_problem', id=id) }}">Back to Problems</a></p>
+        <button type="submit" class="btn-update-all">Update All Testcases</button>
+    </form>
+    {% else %}
+    <div class="no-tc">No testcases yet.</div>
+    {% endif %}
+
+    <a href="{{ url_for('edit_problem', id=problem['id']) }}" class="back-link">← Back to Problems</a>
+</div>
+
+<script>
+    function deleteTestcase(tcId) {
+        if (!confirm("Are you sure you want to delete this testcase?")) return;
+
+        fetch(`/admin/problem/{{ problem['id'] }}/testcases/${tcId}/delete`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) {
+                    const row = document.querySelector(`.tc-row[data-id='${tcId}']`);
+                    if (row) row.remove();
+                } else {
+                    alert("Failed to delete testcase");
+                }
+            });
+    }
+
+</script>
 {% endblock %}
