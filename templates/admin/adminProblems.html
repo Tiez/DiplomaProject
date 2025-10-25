@@ -296,11 +296,11 @@
 
                 <div style="display: flex; gap: 10px; margin: 10px 0;">
                     <label>Easy</label>
-                    <input type="radio" name="diff" value="Easy">
+                    <input type="radio" name="diff" value="Easy" required>
                     <label>Medium</label>
-                    <input type="radio" name="diff" value="Medium">
+                    <input type="radio" name="diff" value="Medium" required>
                     <label>Hard</label>
-                    <input type="radio" name="diff" value="Hard">
+                    <input type="radio" name="diff" value="Hard" required>
                 </div>
 
                 {% if add %}
@@ -386,7 +386,8 @@
                 {{ p.diff | capitalize }}</div>
             <div class=" actions">
                 <a id="edit" href="{{ url_for('edit_problem', id=p.id) }}">Edit</a>
-                <a id="del" href="{{ url_for('delete_problem', id=p.id) }}">Delete</a>
+                <a id="del" href="{{ url_for('delete_problem', id=p.id) }}"
+                    onclick="return confirm('Are you sure you want to delete this problem?')">Delete</a>
             </div>
         </div>
         {% endfor %}
