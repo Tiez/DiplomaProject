@@ -24,6 +24,27 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+
+
+def make_user_object(row):
+    """Convert DB row to Flask-Login compatible object."""
+    if not row:
+        return None
+
+    # Build a dynamic object
+    user_obj = type("UserObj", (), {})()
+    for key in row.keys():
+        setattr(user_obj, key, row[key])
+
+    # Flask-Login required methods
+    user_obj.get_id = lambda: str(user_obj.id)
+    user_obj.is_authenticated = property(lambda self: True)
+    user_obj.is_active = property(lambda self: True)
+    user_obj.is_anonymous = property(lambda self: False)
+
+    return user_obj
+
+
 # ---------------------- Admin Protection ----------------------
 def admin_required(f):
     @wraps(f)
@@ -56,9 +77,7 @@ def load_user(user_id):
     conn = get_db_connection()
     row = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
     conn.close()
-    if row:
-        return type("UserObj", (), dict(row))()
-    return None
+    return make_user_object(row)
 
 # ---------------------- Forms ----------------------
 class LoginForm(FlaskForm):
@@ -73,6 +92,12 @@ class RegistrationForm(FlaskForm):
     confirm_password = PasswordField("Confirm Password", validators=[DataRequired(), EqualTo("password")])
     submit = SubmitField("Register")
 
+@app.route("/")
+def dashboard():
+    return render_template("Dashboard.html")
+
+
+
 # ---------------------- Auth Routes ----------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -82,14 +107,10 @@ def login():
         user = conn.execute("SELECT * FROM users WHERE email=?", (form.email.data,)).fetchone()
         conn.close()
         if user and check_password_hash(user["password_hash"], form.password.data):
-            user_obj = type("UserObj", (), dict(user))()
-            user_obj.is_authenticated = True
-            user_obj.is_active = True
-            user_obj.is_anonymous = False
-            user_obj.get_id = lambda: str(user_obj.id)
+            user_obj = make_user_object(user)
             login_user(user_obj)
             flash("Logged in successfully!", "success")
-            return redirect(url_for("index"))
+            return redirect(url_for("dashboard"))
         flash("Invalid credentials", "danger")
     return render_template("Auth/Login.html", form=form)
 
@@ -122,7 +143,7 @@ def logout():
     return redirect(url_for("login"))
 
 # ---------------------- Home ----------------------
-@app.route("/")
+@app.route("/problem")
 def index():
     return render_template("index.html")
 
@@ -193,6 +214,17 @@ def adminSubmissions():
 def adminSystem():
     return render_template('admin/adminMonitoring.html', worker_count=NUM_WORKERS)
 
+# Submission testcase answer 
+@app.route("/admin/<string:subId>/testCases", methods=['GET']) 
+@admin_required
+def admin_SubTC(subId): 
+    conn = get_db_connection() 
+    tC = conn.execute('SELECT * FROM testcaseSub WHERE subID=? ', (subId,)).fetchall() 
+    conn.close() 
+    tC = [dict(row) for row in tC] 
+    return render_template("admin/adminSubTC.html", subId=subId, subTC=tC)
+
+
 @app.route('/admin/system_data')
 @admin_required
 def adminsystemupdate():
@@ -205,6 +237,22 @@ def adminsystemupdate():
         "queue": submission_queue.qsize(),
         "pending_submissions": list(submission_queue.queue)[:10]
     })
+
+@app.route("/admin/problem/<int:problem_id>/update_all_testcases", methods=["POST"]) 
+def update_all_testcases(problem_id): 
+    print("====================================") 
+    conn = get_db_connection() 
+    tcs = conn.execute("SELECT id FROM test_cases WHERE problem_id = ?", (problem_id,)).fetchall() 
+    for tc in tcs: 
+        tc_id = tc["id"] 
+        input_data = request.form.get(f"input_{tc_id}") 
+        expected_output = request.form.get(f"expected_{tc_id}") 
+        if input_data is not None and expected_output is not None: 
+            conn.execute( "UPDATE test_cases SET input = ?, expected = ? WHERE id = ?", (input_data, expected_output, tc_id) ) 
+            conn.commit() 
+            conn.close() 
+            return redirect(url_for("admin_testcases", problem_id=problem_id))
+
 
 @app.route("/admin/problem/<int:problem_id>/testcases")
 @admin_required
@@ -299,10 +347,293 @@ for i in range(NUM_WORKERS):
     threading.Thread(target=worker, args=(i,), daemon=True).start()
 
 # ---------------------- Run Submission Logic ----------------------
+
 def run_submission(user_code, problem_id, submission_id):
-    # Your existing run_submission code here
-    # Including writing temp file, docker execution, result parsing, database inserts
-    pass  # For brevity, insert all of your original run_submission logic here
+    temp_file = os.path.join(SANDBOX_DIR, f"temp_{submission_id}.py")
+
+    wrapped_code = f"""
+{user_code}
+if __name__ == "__main__":
+        import sys, json, io, contextlib, tracemalloc, time, traceback
+        start_time = time.perf_counter()
+        tracemalloc.start()
+        try:
+            args = json.loads(sys.argv[1])
+            
+            with io.StringIO() as buf, contextlib.redirect_stdout(buf):
+                returned_value = solution(*args)
+                printed_output = buf.getvalue()
+            current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(json.dumps({{"return": returned_value, "printed": printed_output, "memory": peak // 1024, "runtime": round(elapsed_time*1000,1)}}))
+        except Exception as e:
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+
+            error_msg = traceback.format_exc()[250:]
+            
+            
+
+            print(json.dumps({{"error": error_msg, "runtime": round(elapsed_time*1000,1)}}))
+    """
+
+    with open(temp_file, "w") as f:
+        f.write(wrapped_code)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    test_cases = conn.execute(
+        "SELECT input, expected FROM test_cases WHERE problem_id=?", (problem_id,)
+    ).fetchall()
+    conn.close()
+
+    results = []
+
+    for case in test_cases:
+        try:
+            args = json.loads(case["input"])
+            docker_cmd = [
+                "docker", "run", "--memory=100m",  "--rm",
+                "-v", f"{SANDBOX_DIR}:/app",
+                DOCKER_IMAGE,
+                "python3", f"/app/{os.path.basename(temp_file)}",
+                json.dumps(args)
+            ]
+            completed = subprocess.run(docker_cmd, capture_output=True, text=True, timeout=5)
+
+            if completed.stdout:
+                stdout_lines = completed.stdout.strip().splitlines()
+            else:
+                stdout_lines = completed.stderr.strip().splitlines()
+            
+            
+            output_json = None
+
+            for line in stdout_lines:
+                try:
+                    output_json = json.loads(line)
+                    break
+                except json.JSONDecodeError:
+
+
+                    continue
+            print("=====================")
+            print(completed)
+
+            #Memory Limit Error
+            if completed.returncode == 137:
+                results.append({
+                    "input": args,
+                    "expected": json.loads(case["expected"]),
+                    "output": None,
+                    "printed": "",
+                    "verdict": "Memory Limit",
+                    "error": ""
+                })
+
+                databaseInsert = {"memory": "Exceeded", "runtime": 0.0}
+
+                conn = get_db_connection()
+                conn.execute(
+                    "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
+                    ( "Memory Limit", databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
+                
+                for submissionTestCase in results:
+                    print(submissionTestCase)
+                    conn.execute(
+                    "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+                    )
+
+
+                conn.commit()
+                conn.close()
+                return results
+
+
+            if not output_json:
+               
+                stdout_lines = " \n".join(stdout_lines)
+                output_json = {"error":stdout_lines[58:]}
+                print(stdout_lines)
+                
+            print(output_json)
+
+            if output_json is None:
+                results.append({
+                    "input": args,
+                    "expected": json.loads(case["expected"]),
+                    "output": "",
+                    "printed": "",
+                    "verdict": "Error",
+                    "error": "No JSON output"
+                })
+                continue
+
+            if "error" in output_json:
+                verdict = "Error"
+                returned_value = None
+                printed_output = ""
+                error_message = output_json["error"]
+                results.append({
+                    "input": args,
+                    "expected": json.loads(case["expected"]),
+                    "output": returned_value,
+                    "printed": printed_output,
+                    "verdict": verdict,
+                    "error": error_message
+                })
+
+
+                databaseInsert = {"status": f'RunTime Error:\n{error_message}', "memory": 0, "runtime": 0.0}
+
+                conn = get_db_connection()
+                conn.execute(
+                    "UPDATE submissions SET status=?, memory=?, runtime=?, error=? WHERE UniqID = ?",
+                    ( "Error", databaseInsert["memory"], databaseInsert["runtime"], databaseInsert["status"], submission_id ))
+                
+                for submissionTestCase in results:
+                    print(submissionTestCase)
+                    conn.execute(
+                    "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+                    )
+
+
+                conn.commit()
+                conn.close()
+
+
+                file_to_delete = "../sandbox/temp_" + submission_id + ".py"
+                try:
+                    os.remove(file_to_delete)
+                    print(f"File '{file_to_delete}' deleted successfully.")
+                except FileNotFoundError:
+                    print(f"Error: File '{file_to_delete}' not found.")
+                except PermissionError:
+                    print(f"Error: Permission denied to delete '{file_to_delete}'.")
+                except Exception as e:
+                    print(f"An unexpected error occurred: {e}")
+                    # print(jsonify(results))
+
+                return results
+            else:
+                returned_value = output_json.get("return")
+                printed_output = output_json.get("printed", "")
+                expected_value = json.loads(case["expected"])
+                verdict = "correct" if returned_value == expected_value else "wrong"
+
+                error_message = ""
+
+            results.append({
+                "input": args,
+                "expected": json.loads(case["expected"]),
+                "output": returned_value,
+                "printed": printed_output,
+                "verdict": verdict,
+                "error": error_message
+            })
+        except subprocess.TimeoutExpired:
+
+            results.append({
+                "input": args,
+                "expected": json.loads(case["expected"]),
+                "output": "",
+                "printed": "",
+                "verdict": "Time Limit Exceeded",
+                "error": ""
+            })
+            print("===================================================")
+            print(results)
+            conn = get_db_connection()
+
+            conn.execute(
+            "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
+            ( "Time Limit", "0.0", "", submission_id ))
+
+            for submissionTestCase in results:
+                print("what???")
+
+                print(submissionTestCase)
+                conn.execute(
+                "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+                )
+            
+
+            conn.commit()
+            conn.close()
+
+            file_to_delete = "../sandbox/temp_" + submission_id + ".py"
+            try:
+                os.remove(file_to_delete)
+                print(f"File '{file_to_delete}' deleted successfully.")
+            except FileNotFoundError:
+                print(f"Error: File '{file_to_delete}' not found.")
+            except PermissionError:
+                print(f"Error: Permission denied to delete '{file_to_delete}'.")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                # print(jsonify(results))
+
+            return results
+
+    databaseInsert = {"status": 'correct', "memory": 0, "runtime": 0.0}
+
+    for result in results:
+        if result["error"] != '':
+            databaseInsert["status"] = "Error"
+        elif result["verdict"] == "Time Limit Exceeded":
+            databaseInsert["status"] = "Time Limit"
+        elif result["verdict"] == "wrong":
+            databaseInsert["status"] = "wrong"
+
+
+            
+    # if databaseInsert["error"] == "Time Limit" or databaseInsert["error"] == "Error":
+    databaseInsert["memory"] = output_json["memory"]
+    databaseInsert["runtime"] = output_json["runtime"]
+        # ...
+
+    conn = get_db_connection()
+
+
+
+    
+    conn.execute(
+        "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
+        ( databaseInsert["status"], databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
+    
+    print("pls")
+    for submissionTestCase in results:
+        print(submissionTestCase)
+        conn.execute(
+        "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
+        ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
+        )
+        print("Done")
+    
+    conn.commit()
+    conn.close()
+
+    
+
+
+    # Deleting used submission file 
+    file_to_delete = "../sandbox/temp_" + submission_id + ".py"
+    try:
+        os.remove(file_to_delete)
+        print(f"File '{file_to_delete}' deleted successfully.")
+    except FileNotFoundError:
+        print(f"Error: File '{file_to_delete}' not found.")
+    except PermissionError:
+        print(f"Error: Permission denied to delete '{file_to_delete}'.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        # print(jsonify(results))
+    return results
 
 # ---------------------- Submission Routes ----------------------
 @app.route("/run", methods=["POST"])

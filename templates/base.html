@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Panel{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block style %}{% endblock %}
+    <style>
+        body {
+            background-color: #111111;
+            color: #e0e0e0;
+            margin: 0;
+        }
+
+        a {
+            text-decoration: none !important;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(90deg, #1a1a1a, #222222);
+            padding: 10px 20px;
+            border-bottom: 1px solid #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .title {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #edaeae, #7d91ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+        }
+
+        /* Navigation buttons */
+        #navButton {
+            color: #e0e0e0;
+            background-color: #2a2a2a;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 16px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        #navButton:hover {
+            background: linear-gradient(90deg, #5f74ec, #7d91ff);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(95, 116, 236, 0.5);
+        }
+
+        #navButton:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(95, 116, 236, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav>
+
+            <div style="display: flex; gap: 16px;">
+                <a id="navButton" href="{{ url_for('adminProblem') }}">Problems</a>
+
+                <a id="navButton" href="{{ url_for('adminSystem') }}">Explore</a>
+                <a id="navButton" href="{{ url_for('adminSubmissions') }}">Profile</a>
+                {% if current_user.is_authenticated %}
+                Welcome, {{ current_user.username }}!
+                {% if current_user.is_admin %}
+                <p>You are logged in as <strong>Admin</strong>.</p>
+                {% else %}
+                <p>You are logged in as <strong>User</strong>.</p>
+                {% endif %}
+
+                <a href="{{ url_for('logout') }}">Logout</a>
+
+                {% else %}
+                <p>You are not logged in.</p>
+                <a href="{{ url_for('login') }}">Login</a>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+
+</html>
