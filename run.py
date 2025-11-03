@@ -94,7 +94,11 @@ class RegistrationForm(FlaskForm):
 
 @app.route("/")
 def dashboard():
-    return render_template("Dashboard.html")
+
+    if current_user.is_authenticated:
+        return render_template("Dashboard.html")
+    else:
+        return render_template("Homepage.html")
 
 
 
@@ -144,6 +148,7 @@ def logout():
 
 # ---------------------- Home ----------------------
 @app.route("/problem")
+@login_required
 def index():
     return render_template("index.html")
 
@@ -239,6 +244,7 @@ def adminsystemupdate():
     })
 
 @app.route("/admin/problem/<int:problem_id>/update_all_testcases", methods=["POST"]) 
+@admin_required
 def update_all_testcases(problem_id): 
     print("====================================") 
     conn = get_db_connection() 

@@ -4,70 +4,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin Panel{% endblock %}</title>
+    <title>{% block title %}Code Runner{% endblock %}</title>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     {% block style %}{% endblock %}
+
     <style>
-        body {
-            background-color: #111111;
-            color: #e0e0e0;
+        /* ====== Global Reset & Base ====== */
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0d0d0d;
+            color: #e6e6e6;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            line-height: 1.6;
         }
 
         a {
-            text-decoration: none !important;
+            text-decoration: none;
+            color: inherit;
         }
 
-        /* Header */
+        /* ====== Header ====== */
         header {
-            background: linear-gradient(90deg, #1a1a1a, #222222);
-            padding: 10px 20px;
-            border-bottom: 1px solid #333;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(90deg, #161616, #1f1f1f);
+            border-bottom: 1px solid #2d2d2d;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
             position: sticky;
             top: 0;
             z-index: 100;
+            padding: 10px 8%;
         }
 
         nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
 
-        nav .title {
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .title {
             font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(90deg, #edaeae, #7d91ff);
+            font-weight: 700;
+            background: linear-gradient(90deg, #e58c8c, #7d91ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            letter-spacing: 0.5px;
         }
 
-        /* Navigation buttons */
-        #navButton {
-            color: #e0e0e0;
-            background-color: #2a2a2a;
+        /* ====== Navigation Buttons ====== */
+        .nav-btn {
+            color: #8a8a8a;
+
             border: none;
-            border-radius: 8px;
-            padding: 6px 14px;
-            transition: all 0.3s ease;
+            padding: 8px 18px;
             font-weight: 500;
-            font-size: 16px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+            font-size: 15px;
+            transition: all 0.25s ease;
+            cursor: pointer;
         }
 
-        #navButton:hover {
-            background: linear-gradient(90deg, #5f74ec, #7d91ff);
-            color: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(95, 116, 236, 0.5);
+        .nav-btn:hover {
+            color: #cccccc;
         }
 
-        #navButton:active {
+        .nav-btn:active {
             transform: translateY(0);
-            box-shadow: 0 2px 6px rgba(95, 116, 236, 0.3);
+            box-shadow: 0 2px 6px rgba(125, 145, 255, 0.25);
+        }
+
+        /* ====== User Info Section ====== */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 15px;
+        }
+
+        .user-role {
+            color: #7d91ff;
+            font-weight: 600;
+        }
+
+        .logout-link {
+            background-color: #2e2e2e;
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .logout-link:hover {
+            background-color: #444;
+        }
+
+        /* ====== Main Content ====== */
+        main {
+            padding: 40px 10%;
+            min-height: calc(100vh - 80px);
         }
     </style>
 </head>
@@ -75,25 +120,28 @@
 <body>
     <header>
         <nav>
+            <div class="nav-left">
+                <div class="title">Code Runner</div>
 
-            <div style="display: flex; gap: 16px;">
-                <a id="navButton" href="{{ url_for('adminProblem') }}">Problems</a>
+                <a class="nav-btn" href="{{ url_for('index') }}">Бодлого</a>
+                <a class="nav-btn" href="{{ url_for('adminSystem') }}">Мэдээ</a>
+                <a class="nav-btn" href="{{ url_for('adminSubmissions') }}">Тэмцээн</a>
+            </div>
 
-                <a id="navButton" href="{{ url_for('adminSystem') }}">Explore</a>
-                <a id="navButton" href="{{ url_for('adminSubmissions') }}">Profile</a>
+            <div class="user-info">
                 {% if current_user.is_authenticated %}
-                Welcome, {{ current_user.username }}!
+                <span>Тавтай морил, <strong>{{ current_user.username }}</strong>!</span>
+
                 {% if current_user.is_admin %}
-                <p>You are logged in as <strong>Admin</strong>.</p>
-                {% else %}
-                <p>You are logged in as <strong>User</strong>.</p>
+                <span class="user-role">Admin</span>
+
                 {% endif %}
 
-                <a href="{{ url_for('logout') }}">Logout</a>
+                <a class="logout-link" href="{{ url_for('logout') }}">Гарах</a>
 
                 {% else %}
-                <p>You are not logged in.</p>
-                <a href="{{ url_for('login') }}">Login</a>
+                <span>Та нэвтэрч ороогүй байна.</span>
+                <a class="logout-link" href="{{ url_for('login') }}">Нэвтрэх</a>
                 {% endif %}
             </div>
         </nav>

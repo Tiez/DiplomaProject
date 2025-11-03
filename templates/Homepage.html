@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="mn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Runner | Master Coding Through Practice</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ====== Global Reset & Base ====== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0d0d0d;
+            color: #e6e6e6;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            line-height: 1.6;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* ====== Header ====== */
+        header {
+            position: static;
+            top: 0;
+            z-index: 100;
+            padding: 10px 8%;
+            background: transparent;
+            /* no background */
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-left {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            padding-bottom: 5px;
+            background: linear-gradient(90deg, #e58c8c, #7d91ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-btn {
+            color: #fff;
+            background: none;
+            /* transparent button */
+            /* simple border */
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-weight: 500;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            margin: 3px 30px;
+        }
+
+        .nav-btn-sign {
+            color: #fff;
+            background: none;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-weight: 500;
+            font-size: 20px;
+            cursor: pointer;
+            margin: 3px 30px;
+        }
+
+        .nav-btn-sign:hover {
+            /* /* background: #fff; */
+            color: #9e68d0;
+            text-shadow: 0 0 12px rgba(125, 145, 255, 1);
+            /* stronger glow on hover */
+        }
+
+
+        .nav-btn:hover {
+            background: #fff;
+            color: #0d0d0d;
+        }
+
+        .user-info {
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        main {
+            padding: 10px 10%;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* ====== Hero ====== */
+        .hero {
+            text-align: left;
+            margin-top: 150px;
+            margin-bottom: 150px;
+
+        }
+
+        .hero h1 {
+            font-size: 50px;
+            background: linear-gradient(90deg, #7d91ff, #e58c8c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #7d91ff, 0 0 10px #5f74ec;
+            }
+
+            to {
+                text-shadow: 0 0 20px #e58c8c, 0 0 40px #ffbcbc;
+            }
+        }
+
+        .hero p {
+            color: #b3b3b3;
+            font-size: 18px;
+            margin-top: 20px;
+            line-height: 1.7;
+        }
+
+        .hero button {
+            margin-top: 35px;
+            padding: 12px 28px;
+            font-size: 17px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #5f74ec, #7d91ff);
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+        }
+
+        .hero button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(125, 145, 255, 0.4);
+        }
+
+        /* ====== Feature Sections ===== */
+        .feature-section {
+            padding: 100px 10%;
+            text-align: left;
+
+            /* Add fade out on left/right */
+            -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0), black 10%, black 90%, rgba(0, 0, 0, 0));
+            -webkit-mask-repeat: no-repeat;
+            -webkit-mask-size: 100% 100%;
+
+            mask-image: linear-gradient(to right, rgba(0, 0, 0, 0), black 10%, black 90%, rgba(0, 0, 0, 0));
+            mask-repeat: no-repeat;
+            mask-size: 100% 100%;
+        }
+
+
+        .feature-section h2 {
+            font-size: 38px;
+            background: linear-gradient(90deg, #7d91ff, #e58c8c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+
+
+        }
+
+        .feature-section p {
+            font-size: 18px;
+            color: #bdbdbd;
+            max-width: 700px;
+            margin: auto;
+        }
+
+
+
+        .feature-2 {
+            background: #0f1012;
+
+        }
+
+        .feature-3 {
+            background: #141518;
+
+        }
+
+        .feature-4 {
+            background: #181a1f;
+
+        }
+
+        footer {
+            margin-top: 140px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            padding-bottom: 40px;
+        }
+
+        footer span {
+            color: #7d91ff;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="nav-left">
+                <div class="title">Code Runner</div>
+                <a class="nav-btn" href="/">Бодлого</a>
+                <a class="nav-btn" href="/news">Мэдээ</a>
+                <a class="nav-btn" href="/contests">Тэмцээн</a>
+            </div>
+            <div class="user-info">
+                <a class="nav-btn-sign" href="/login">Нэвтрэх</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <h1>Код ашиглан </br>тархиа хурцал</h1>
+            <p>Код бичих, асуудал шийдвэрлэх чадвараа хөгжүүлэх цоо шинэ интерактив гарлгалгаа.<br>
+                Мэдлэгээ нэмэх, ажилд бэлдэх, сонирхлоороо ч байсан код бичихийг хүссэн хүн болгонд нээлттэй.</p>
+            <a href="/register"><button>Яг одоо эхэл →</button></a>
+        </section>
+
+        <!-- Feature 1 -->
+        <section class="feature-section feature-1">
+            <h2>🧩 Өргөн хүрээний бодлогууд</h2>
+            <p>Таны мэдлэг чадварыг шалган өсөн дэмжихэд туслах бүх төрлийн амар, хялбар / хэцүү, хүнд хэдэн мянган
+                бодлого, сорилтууд.</p>
+        </section>
+
+        <!-- Feature 2 -->
+        <section class="feature-section feature-2">
+            <h2>⚔️ Өрсөлдөөнт орчин</h2>
+            <p>Бидний тэмцээн уралдаанд оролцон бусадтай ухаан эрдэмээрээ өрсөлдөн, асуудал шийдвэрлэх, ялалтын сайханыг
+                мэдэрч өөрийгөө сориорой.</p>
+        </section>
+
+        <!-- Feature 3 -->
+        <section class="feature-section feature-3">
+            <h2>Монгол хэл дээр таны гарт</h2>
+            <p>Мэдэж сурах хүсэлтэй Монгол залуучуудад зориулан бүх мэдээлэл Монгол хэл дээр тул хэн бүхэнд нээлттэй.
+            </p>
+        </section>
+
+        <section class="feature-section feature-4">
+            <h2>Боломж бүхэн таны гарт</h2>
+            <p>Бид нартай хамт чадвар, мэдлэг, ажилын каррьераа шинэ түвшинд гаргаарай.</br> Амбиц, амжилт, мөрөөдөлөө
+                хөөх одоо л цаг нь...</p>
+        </section>
+
+        <footer>
+            <p>Made with <span>❤</span> in Mongolia — for learners, dreamers, and future engineers.</p>
+        </footer>
+    </main>
+</body>
+
+</html>
