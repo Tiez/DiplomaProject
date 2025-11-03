@@ -20,7 +20,7 @@
         }
 
         body {
-            background-color: #0d0d0d;
+            background-color: #141414;
             color: #e6e6e6;
             font-family: 'Inter', 'Segoe UI', sans-serif;
             line-height: 1.6;
@@ -39,7 +39,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            padding: 10px 8%;
+            padding: 0px 8%;
         }
 
         nav {
@@ -80,10 +80,6 @@
             color: #cccccc;
         }
 
-        .nav-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 6px rgba(125, 145, 255, 0.25);
-        }
 
         /* ====== User Info Section ====== */
         .user-info {
@@ -100,7 +96,7 @@
 
         .logout-link {
             background-color: #2e2e2e;
-            padding: 6px 14px;
+            padding: 2px 14px;
             border-radius: 8px;
             transition: background 0.2s ease;
         }
@@ -123,12 +119,19 @@
             <div class="nav-left">
                 <div class="title">Code Runner</div>
 
-                <a class="nav-btn" href="{{ url_for('index') }}">Бодлого</a>
-                <a class="nav-btn" href="{{ url_for('adminSystem') }}">Мэдээ</a>
+                <a class="nav-btn" href="{{ url_for('dashboard') }}">Нүүр</a>
+                <a class="nav-btn" href="{{ url_for('problemsheet') }}">Бодлого</a>
                 <a class="nav-btn" href="{{ url_for('adminSubmissions') }}">Тэмцээн</a>
+                <a class="nav-btn" href="{{ url_for('adminSubmissions') }}">Хичээл</a>
             </div>
 
             <div class="user-info">
+
+                <a href="{{ url_for('profile', id=1) }}"><img
+                        style="border-radius: 50px; align-items: center; display: flex;" width="30"
+                        src="../static/pictures/Defaultuser.png"></a>
+
+
                 {% if current_user.is_authenticated %}
                 <span>Тавтай морил, <strong>{{ current_user.username }}</strong>!</span>
 

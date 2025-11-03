@@ -1,9 +1,150 @@
 {% extends "base.html" %}
 {% block content %}
-Dashboard
+
+{% block style %}
+<style>
+    .base {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .articles {
+        flex: 3;
+        min-width: 100%;
+    }
+
+    .article {
+        border-bottom: solid 0.1px rgb(52, 52, 52);
+        margin: 10px 0px 20px;
+        padding: 10px
+    }
+
+    .article-title {
+        font-size: 25px;
+        font-weight: 500;
+        margin: -15px 0px;
+    }
+
+    .article-desc {
+        font-size: 16px;
+    }
+
+    .article-link {
+        font-size: 12px;
+        margin: 10px 0px;
+        color: blue;
+    }
+
+    .article-time {
+        font-size: 12px;
+        color: rgb(89, 89, 89);
+        margin: 10px 0px;
+    }
+
+    .nav {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        color: rgb(210, 210, 210);
+        min-width: 300px;
+        padding: 10px;
+        background-color: rgb(27, 27, 27);
+        border-radius: 10px;
+        margin: 0px 20px;
+        font-size: 14px;
+        gap: 1rem;
+        max-height: 530px
+    }
+
+    .nav-section {
+        padding: 5px;
+    }
+
+    .nav-title {
+        padding: 5px 0px;
+        font-size: 20px;
+        color: azure;
+    }
+
+    .sec-btn {
+        background-color: rgb(66, 66, 66);
+        border-radius: 5px;
+        padding: 9px;
+    }
+
+    .nav-desc {
+        padding: 15px 0px;
+    }
+
+    .news {
+        flex: 3
+    }
+</style>
+{% endblock %}
+
+
+<div class="base">
+
+    <div class="news">
+        <div style="font-size: 25px; font-weight: 400; ">Мэдээ</div>
+        <div class="articles">
+            {% for article in articles %}
 
 
 
 
+            <section class="article">
+                <div style="display: flex; flex-direction: column;">
+                    <div class="article-title"> {{ article.title }} </div>
+                    <div class="article-time">{{ article.time }}</div>
+                </div>
 
+                <div class="article-desc">{{ article.desc }}</div>
+
+                <div class="article-link"> <a href="{{ article.link }}">for more click here</a> </div>
+            </section>
+
+
+
+            {% endfor %}
+        </div>
+    </div>
+
+
+
+
+    <section class="nav">
+        <div class="nav-section">
+            <div class="nav-title">
+                Програмчлалын хичээлүүд
+            </div>
+            <div class="nav-desc">
+                Хаанаас эхлэхээ мэдэхгүй байна уу? санаа зоволтгүй манай сайтаас хүссэн хичээлээ үе шаттайгаар нээн үзэх
+                боломжтой.
+            </div>
+            <a class="sec-btn" href="">Хичээл үзэх</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-title">
+                Бодлогууд
+            </div>
+            <div class="nav-desc">
+                Манай онцгой интерактив бодлогуудыг бодон мэдлэгээ нэмээрэй.
+            </div>
+            <a class="sec-btn" href="">Бодлогийн хуудас</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-title">
+                Тэмцээнүүд
+            </div>
+            <div class="nav-desc">
+                Зарлагдсан тэмцээнүүдэд оролцон шагналын эзэн болоорой.
+            </div>
+            <a class="sec-btn" href="">Зарлагдсөн тэмцээнүүд</a>
+        </div>
+
+
+</div>
+</section>
+</div>
 {% endblock %}

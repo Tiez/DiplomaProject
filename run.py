@@ -96,7 +96,10 @@ class RegistrationForm(FlaskForm):
 def dashboard():
 
     if current_user.is_authenticated:
-        return render_template("Dashboard.html")
+        conn = get_db_connection()
+        articles = conn.execute("SELECT * FROM news").fetchall()
+        conn.close()
+        return render_template("Dashboard.html", articles=articles)
     else:
         return render_template("Homepage.html")
 
@@ -145,6 +148,22 @@ def logout():
     logout_user()
     flash("Logged out", "info")
     return redirect(url_for("login"))
+
+
+
+
+
+@app.route("/profile/<int:id>")
+def profile(id):
+    return render_template("UserProfile.html")
+
+
+@app.route("/problemsheet")
+def problemsheet():
+    return render_template("ProblemSheet.html")
+
+
+
 
 # ---------------------- Home ----------------------
 @app.route("/problem")
