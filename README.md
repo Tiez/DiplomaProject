@@ -1,9 +1,10 @@
-# Project Name       <!-- Main title -->
+# Diploma project Code runner       <!-- Main title -->
+This is a leetcode like website that im working on for my diploma project. Reason i wanted to make this was in my country there is not much of information and good source in computer science field. For myself i was reletavly familiar with english so i had no trouble finding the information i needed. But that was not the case for every one. Because of the language barrier. This projects goal is to remove that language barrier and be the bridge for many ambitaus mongolian youths who have big dreams.
 ## Features          <!-- Secondary -->
 ### Installation     <!-- Sub-section -->
 
 
-Diploma project Code runner
+
 
 
 How to run the project:
