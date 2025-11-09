@@ -19,16 +19,18 @@ To run this project in parent folder of project, folder named "sandbox" is requi
 
 Step 1:
 1. First create a virtual enviroment. To do that run following command ```sudo apt install -y python3-venv```
-2. Navigate to project folder then run python3 -m venv venv
-3. Then activate the enviroment with source venv/bin/activate and install all required packages
+2. Navigate to project folder then run ```python3 -m venv venv```
+3. Then activate the enviroment with ```source venv/bin/activate``` and install all required packages with following code
+   ```pip install flask==3.1.2 flask-login==0.6.3 werkzeug==3.1.3 flask-wtf==1.2.2 wtforms==3.2.1 psutil==7.0.0```
 
 Step 2:
 Download and install docker:
+
 On linux:
-  1. Install prerequisites sudo dnf -y install dnf-plugins-core
-  2. Add Docker repository sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-  3. Install Docker sudo dnf install docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  4. Start docker sudo systemctl start docker / sudo systemctl enable docker
+  1. Install prerequisites ```sudo dnf -y install dnf-plugins-core```
+  2. Add Docker repository ```sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo```
+  3. Install Docker ```sudo dnf install docker-ce docker-ce-cli containerd.io docker-compose-plugin```
+  4. Start docker ```sudo systemctl start docker / sudo systemctl enable docker```
 
 Verify installation with this command sudo docker run hello-world
 
@@ -38,8 +40,8 @@ On windows:
 
 Step 3:
 Build docker image in main DiplomaProject folder with dockerfile. Name must be "python-sandbox"
-Build image with following command in console docker build -t python-sandbox .
+Build image with following command in console ```docker build -t python-sandbox .```
 
 
 Step 4:
-run server by running run.py in console python run.py. Make sure virtual enviroment is still active
+run server by running run.py in console ```python run.py```. Make sure virtual enviroment is still active
