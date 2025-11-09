@@ -7,10 +7,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length
+from collections import defaultdict
+from datetime import datetime
 import psutil
 import subprocess
 import json
 import queue
+
 import threading
 import uuid
 
@@ -150,6 +153,29 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/contributions")
+def getContributions():
+
+    conn = get_db_connection()
+    contributions = conn.execute("SELECT contribution_date, count FROM contributions WHERE user_id = ? AND contribution_date >= '2025-01-01' AND contribution_date <= '2025-12-31' ORDER BY contribution_date;", (current_user.id,)).fetchall()
+    conn.close()
+
+
+    contributions_dict = defaultdict(list)
+
+    for contribution in contributions:
+            # If row is a tuple: (contribution_date, count)
+        date_str, count = contribution
+        
+            # Convert date string to datetime object
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+        month_index = date_obj.month - 1  # 0=Jan, 11=Dec
+        contributions_dict[month_index].append({"dateData": [date_obj.day, count]})
+        
+
+
+    print(json.dumps(dict(contributions_dict)))
+    return json.dumps(dict(contributions_dict))
 
 
 
