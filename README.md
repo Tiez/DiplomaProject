@@ -18,7 +18,7 @@ psutil 7.0.0 ver
 To run this project in parent folder of project, folder named "sandbox" is required
 
 Step 1:
-1. First create a virtual enviroment. To do that run following command sudo apt install -y python3-venv
+1. First create a virtual enviroment. To do that run following command ```sudo apt install -y python3-venv```
 2. Navigate to project folder then run python3 -m venv venv
 3. Then activate the enviroment with source venv/bin/activate and install all required packages
 
