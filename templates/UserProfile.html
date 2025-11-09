@@ -47,11 +47,11 @@ User Profile
     }
 
     .level-1 {
-        background-color: #2a362c;
+        background-color: #1a391f;
     }
 
     .level-2 {
-        background-color: #2e5737;
+        background-color: #25532f;
     }
 
     .level-3 {
@@ -59,7 +59,7 @@ User Profile
     }
 
     .level-4 {
-        background-color: #37ce53;
+        background-color: #41cd5a;
     }
 </style>
 </head>
@@ -166,10 +166,10 @@ User Profile
         }
 
         function getContributionLevel(count) {
-            if (count <= 2) return 0;
-            if (count <= 3) return 1;
-            if (count <= 5) return 2;
-            if (count <= 7) return 3;
+            if (count <= 0) return 0;
+            if (count <= 2) return 1;
+            if (count <= 4) return 2;
+            if (count <= 6) return 3;
             return 4;
         }
 

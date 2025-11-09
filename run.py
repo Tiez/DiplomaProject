@@ -152,7 +152,7 @@ def logout():
     flash("Logged out", "info")
     return redirect(url_for("login"))
 
-
+@login_required
 @app.route("/contributions")
 def getContributions():
 
@@ -172,18 +172,15 @@ def getContributions():
         month_index = date_obj.month - 1  # 0=Jan, 11=Dec
         contributions_dict[month_index].append({"dateData": [date_obj.day, count]})
         
-
-
-    print(json.dumps(dict(contributions_dict)))
     return json.dumps(dict(contributions_dict))
 
 
-
+@login_required
 @app.route("/profile/<int:id>")
 def profile(id):
     return render_template("UserProfile.html")
 
-
+@login_required
 @app.route("/problemsheet")
 def problemsheet():
     return render_template("ProblemSheet.html")
@@ -192,6 +189,7 @@ def problemsheet():
 
 
 # ---------------------- Home ----------------------
+
 @app.route("/problem")
 @login_required
 def index():
@@ -381,13 +379,13 @@ worker_status = {}
 SANDBOX_DIR = "/home/lenovo/sandbox"
 DOCKER_IMAGE = "python-sandbox"
 
-def worker(worker_id):
+def worker(worker_id,):
     while True:
         worker_status[worker_id] = "idle"
-        submission_id, user_code, problem_id = submission_queue.get()
+        submission_id, user_code, problem_id, user_id = submission_queue.get()
         worker_status[worker_id] = f"{submission_id}"
         try:
-            result = run_submission(user_code, problem_id, submission_id)
+            result = run_submission(user_code, problem_id, submission_id, user_id)
             results_map[submission_id] = result
         except Exception as e:
             results_map[submission_id] = [{"verdict": "Error", "error": str(e)}]
@@ -399,7 +397,8 @@ for i in range(NUM_WORKERS):
 
 # ---------------------- Run Submission Logic ----------------------
 
-def run_submission(user_code, problem_id, submission_id):
+
+def run_submission(user_code, problem_id, submission_id, user_id):
     temp_file = os.path.join(SANDBOX_DIR, f"temp_{submission_id}.py")
 
     wrapped_code = f"""
@@ -441,6 +440,19 @@ if __name__ == "__main__":
     conn.close()
 
     results = []
+
+
+    conn = get_db_connection()
+    print(current_user, " user id\n")
+
+    conn.execute("""
+    INSERT INTO contributions (user_id, contribution_date, count)
+    VALUES (?, ?, 1)
+    ON CONFLICT(user_id, contribution_date)
+    DO UPDATE SET count = count + 1;
+    """, (user_id, "2025-11-09"))
+    conn.commit()
+    conn.close()
 
     for case in test_cases:
         try:
@@ -657,14 +669,17 @@ if __name__ == "__main__":
         "UPDATE submissions SET status=?, memory=?, runtime=? WHERE UniqID = ?",
         ( databaseInsert["status"], databaseInsert["memory"], databaseInsert["runtime"], submission_id ))
     
-    print("pls")
+
+    
+
+
     for submissionTestCase in results:
         print(submissionTestCase)
         conn.execute(
         "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
         ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])
         )
-        print("Done")
+
     
     conn.commit()
     conn.close()
@@ -687,6 +702,7 @@ if __name__ == "__main__":
     return results
 
 # ---------------------- Submission Routes ----------------------
+@login_required
 @app.route("/run", methods=["POST"])
 def run_code():
     data = request.get_json()
@@ -697,11 +713,12 @@ def run_code():
     problem_id = data["problem_id"]
     conn = get_db_connection()
     conn.execute(
-        "INSERT INTO submissions (problem_id, code, UniqID) VALUES (?, ?, ?)",
-        (problem_id, user_code , submission_id ))
+        "INSERT INTO submissions (problem_id, code, UniqID, userID) VALUES (?, ?, ?, ?)",
+        (problem_id, user_code , submission_id , current_user.id))
+    
     conn.commit()
     conn.close()
-    submission_queue.put((submission_id, user_code, problem_id))
+    submission_queue.put((submission_id, user_code, problem_id, current_user.id))
     return jsonify({"submission_id": submission_id})
 
 @app.route("/result/<submission_id>")
