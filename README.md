@@ -1,1 +1,43 @@
-Diploma project
+Diploma project Code runner
+
+
+How to run the project:
+reqiurments
+
+python 3.12ver
+docker 4.50 ver
+flask 3.1.2 ver
+flask-login 0.6.3 ver
+werkzeug 3.1.3 ver
+flask-wtf 1.2.2 ver
+wtforms 3.2.1 ver
+psutil 7.0.0 ver
+
+To run this project in parent folder of project, folder named "sandbox" is required
+
+Step 1:
+1. First create a virtual enviroment. To do that run following command sudo apt install -y python3-venv
+2. Navigate to project folder then run python3 -m venv venv
+3. Then activate the enviroment with source venv/bin/activate and install all required packages
+
+Step 2:
+Download and install docker:
+On linux:
+  1. Install prerequisites sudo dnf -y install dnf-plugins-core
+  2. Add Docker repository sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+  3. Install Docker sudo dnf install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  4. Start docker sudo systemctl start docker / sudo systemctl enable docker
+
+Verify installation with this command sudo docker run hello-world
+
+On windows:
+  1. Download and install docker from oficial website https://docs.docker.com/desktop/setup/install/windows-install/
+  2. Restart your pc after installation
+
+Step 3:
+Build docker image in main DiplomaProject folder with dockerfile. Name must be "python-sandbox"
+Build image with following command in console docker build -t python-sandbox .
+
+
+Step 4:
+run server by running run.py in console python run.py. Make sure virtual enviroment is still active
