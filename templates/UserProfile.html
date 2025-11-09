@@ -6,236 +6,418 @@
 {% endblock %}
 
 {% block content %}
-User Profile
+
 
 <style>
     #contribution-grid {
         display: flex;
         flex-direction: row;
+        flex-wrap: nowrap;
+        /* keeps months in a row */
+        flex: 1;
+        /* take all available space */
+        width: 100%;
+        /* make it span the full width of parent */
+        background-color: #1f1f1f;
+        padding: 10px;
+        border-radius: 10px;
+        overflow-x: auto;
+        /* allow scrolling horizontally if needed */
+        max-height: 140px;
+
+    }
+
+    .user_section {
+        display: flex;
+        flex-direction: column;
+        background-color: #1f1f1f;
+        border-radius: 10px;
+        padding: 15px;
+        margin-right: 10px;
+        flex: 1;
+        max-width: 300px;
+    }
+
+    .user_history {
+        height: 400px;
+        background-color: #1f1f1f;
+        margin-top: 20px;
+        border-radius: 10px;
+    }
+
+    .one_log {
+        height: 30px;
+        border-bottom: #333333 solid 2px;
+        padding: 0px 40px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .history_header {
+        display: flex;
+        justify-content: center;
+        font-weight: bold;
+        border-bottom: #333333 solid 2px;
+        padding: 5px;
+    }
+
+    .bio_section {
+        padding: 15px 0px;
+    }
+
+    .profile_picture {
+        width: 100px;
+        height: 100px;
+        border-radius: 10px;
+    }
+
+    .name {
+        padding: 0px 10px;
+        font-weight: bold;
     }
 
     .month {
-        padding: 10px;
-        margin-bottom: 40px;
+        padding: 3px;
+        flex: 1 0 auto;
+        /* allow each month to grow but not shrink too much */
     }
 
     .month-name {
         font-weight: bold;
         margin-bottom: 5px;
+        font-size: 10px;
+        text-align: center;
     }
 
     .grid {
         display: grid;
         grid-auto-flow: column;
         /* each week is a column */
-        grid-template-rows: repeat(7, 15px);
+        grid-template-rows: repeat(7, 10px);
         /* 7 days per week */
-        gap: 3px;
+        gap: 2px;
+    }
+
+    .user_info {
+        display: flex;
+        flex-direction: column;
+        /* stack months vertically */
+        flex: 1;
+        /* let it grow to fill available space */
+        /* same black background */
+        padding: 10px;
+        overflow-x: auto;
+        /* allow horizontal scroll if too wide */
+
+    }
+
+    .user_progress {
+        margin-bottom: 20px;
+        width: 100%;
+        padding: 15px 0px;
+    }
+
+    .progress-container {
+        width: 100%;
+        background-color: #313131;
+        /* dark gray background */
+        border-radius: 5px;
+        overflow: hidden;
+        height: 15px;
+        margin-bottom: 5px;
+    }
+
+    .progress-bar {
+        height: 100%;
+        width: 0%;
+        /* start at 0, update with JS */
+        background-color: #85ff9b;
+        /* bright green */
+        border-radius: 5px 0 0 5px;
+        transition: width 0.5s ease;
+    }
+
+    .progress-text {
+        font-size: 12px;
+        color: #fff;
+        text-align: right;
     }
 
     .empty {
-        width: 15px;
-        height: 15px;
+        width: 10px;
+        height: 10px;
     }
 
     .day {
-        width: 15px;
-        height: 15px;
-        border-radius: 3px;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
         background-color: #313131;
         /* gray for zero */
     }
 
     .level-1 {
-        background-color: #1a391f;
+        background-color: #27552f;
     }
 
     .level-2 {
-        background-color: #25532f;
+        background-color: #388c4a;
     }
 
     .level-3 {
-        background-color: #388a47;
+        background-color: #6fc67f;
     }
 
     .level-4 {
-        background-color: #41cd5a;
+        background-color: #85ff9b;
     }
 </style>
 </head>
 
 <body>
 
-    <div id="contribution-grid"></div>
+    <div style="display: flex; flex-direction: row;">
 
-    <script type="module">
-        let contriData;
+        <div class="user_section">
+            <div style="display: flex; justify-content: start;">
+                <img class="profile_picture" src="../../static/pictures/Defaultuser.png">
+                <div class="name">
+                    {{ current_user.username }}
+                </div>
+            </div>
+            <div class="bio_section">
+                Bio section testing. It has to be a long text so im making this filler texts
+            </div>
+            <div class="user_trophies">Trophies</div>
+        </div>
 
-        const response = await fetch('/contributions');
-        if (!response.ok) throw new Error('Network response was not ok');
+        <div class="user_info">
+            <div class="user_progress">
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <div class="progress-text" id="progress-text"></div>
+            </div>
+            <div id="contribution-grid"></div>
+            <div class="user_history">
+                <div class="history_header">
+                    History
+                </div>
+                <div class="one_log">
+                    <div>bodloho</div>
+                    <div>on sar</div>
+                </div>
+                <div class="one_log">
+                    <div>bodloho</div>
+                    <div>on sar</div>
+                </div>
+                <div class="one_log">
+                    <div>bodloho</div>
+                    <div>on sar</div>
+                </div>
+                <div class="one_log">
+                    <div>bodloho</div>
+                    <div>on sar</div>
+                </div>
+                <div class="one_log">
+                    <div>bodloho</div>
+                    <div>on sar</div>
+                </div>
+                <div class="one_log">
+                    <div>bodloho</div>
+                    <div>on sar</div>
+                </div>
+                <div class="one_log">
+                    <div>bodloho</div>
+                    <div>on sar</div>
+                </div>
+            </div>
 
-        const data = await response.json(); // parse JSON
-        contriData = data
-
-        // Now you can use this data to render your grid
-        // Example: pass it to your renderGrid function
-
-
-        let emptyData = {}
-        const year = new Date().getFullYear();
-        for (let m = 0; m < 12; m++) {
-            const daysInMonth = new Date(year, m + 1, 0).getDate();
-            emptyData[m] = [];
-            for (let d = 1; d <= daysInMonth; d++) {
-                emptyData[m].push(0);
-            }
-        }
-
-
-        // let contributions = generateRandomContributions();
-
-        const months = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        ];
-        let contributions = seedContributions(emptyData);
-
-
-
-        function calculateDaysForMonth(month) {
-
-            const monthDay = month % 2 === 0;
-
-            if (month === 1) {
-                return 27;
-            }
-            if (month >= 7) {
-                if (monthDay) {
-                    return 29;
-                } else {
-                    return 30;
-                }
-            } else {
-                if (monthDay) {
-                    return 30;
-                } else {
-                    return 29;
-                }
-            }
-        }
-
-        function seedContributions(contributionData) {
-            months.forEach((monthName, monthIndex) => {
-                console.log(monthName + " " + contriData[String(monthIndex)])
-                let eachMonthContributions = contriData[String(monthIndex)]
-
-                if (eachMonthContributions) {
-                    eachMonthContributions.forEach((dayContri, index) => {
-
-
-                        if (dayContri) {
-                            console.log(contributionData)
-                            console.log(contributionData[monthIndex], monthName)
-                            console.log(dayContri["dateData"][0], dayContri["dateData"][1])
+        </div>
 
 
 
-                            contributionData[monthIndex][dayContri["dateData"][0] - 1] = dayContri["dateData"][1];
-                        }
+        <script type="module">
 
-                    })
-                }
-            })
-            return contributionData;
-        }
+            const solvedProblems = 39;
+            const totalProblems = 50;
 
 
+            const progressPercent = (solvedProblems / totalProblems) * 100;
 
-        // Generate random contributions
-        function generateRandomContributions() {
-            let data = {};
+
+            const progressBar = document.getElementById("progress-bar");
+            progressBar.style.width = progressPercent + "%";
+
+
+            const progressText = document.getElementById("progress-text");
+            progressText.textContent = `${solvedProblems} / ${totalProblems} problems solved`;
+
+            let contriData;
+
+            const response = await fetch('/contributions');
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const data = await response.json();
+            contriData = data
+
+
+
+            let emptyData = {}
             const year = new Date().getFullYear();
             for (let m = 0; m < 12; m++) {
                 const daysInMonth = new Date(year, m + 1, 0).getDate();
-                data[m] = [];
+                emptyData[m] = [];
                 for (let d = 1; d <= daysInMonth; d++) {
-                    data[m].push(Math.floor(Math.random() * 12));
+                    emptyData[m].push(0);
                 }
             }
-            return data;
-        }
 
-        function getContributionLevel(count) {
-            if (count <= 0) return 0;
-            if (count <= 2) return 1;
-            if (count <= 4) return 2;
-            if (count <= 6) return 3;
-            return 4;
-        }
 
-        const container = document.getElementById("contribution-grid");
+            // let contributions = generateRandomContributions();
 
-        // console.log(contriData["10"].length);
-        // contriData.forEach((monthName, monthIndex) => {
-        //     console.log(contributions[0]);
-        // });
+            const months = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+            let contributions = seedContributions(emptyData);
 
 
 
+            function calculateDaysForMonth(month) {
 
+                const monthDay = month % 2 === 0;
 
-
-
-
-        months.forEach((monthName, monthIndex) => {
-
-            const monthDiv = document.createElement("div");
-            monthDiv.className = "month";
-
-            const monthLabel = document.createElement("div");
-            monthLabel.className = "month-name";
-            monthLabel.textContent = monthName;
-            monthDiv.appendChild(monthLabel);
-
-            const grid = document.createElement("div");
-            grid.className = "grid";
-
-            const days = contributions[monthIndex];
-            // console.log(days)
-
-            const firstDay = new Date(new Date().getFullYear(), monthIndex, 1).getDay(); // 0=Sunday
-            const totalWeeks = Math.ceil((firstDay + days.length) / 7);
-
-            for (let w = 0; w < totalWeeks; w++) {
-
-                for (let d = 0; d < 7; d++) {
-                    const dayIndex = w * 7 + d - firstDay;
-
-                    const dayDiv = document.createElement("div");
-                    dayDiv.className = "day";
-
-
-                    if (dayIndex >= 0 && dayIndex < days.length) {
-
-                        const level = getContributionLevel(days[dayIndex]);
-                        if (level) dayDiv.classList.add(`level-${level}`);
-                    }
-
-                    if (dayIndex >= 0 && dayIndex <= calculateDaysForMonth(monthIndex)) {
-                        grid.appendChild(dayDiv);
-
+                if (month === 1) {
+                    return 27;
+                }
+                if (month >= 7) {
+                    if (monthDay) {
+                        return 29;
                     } else {
-                        // console.log(calculateDaysForMonth(monthIndex))
-                        const emptyDay = document.createElement("div");
-                        emptyDay.className = "empty"
-                        grid.appendChild(emptyDay);
+                        return 30;
+                    }
+                } else {
+                    if (monthDay) {
+                        return 30;
+                    } else {
+                        return 29;
                     }
                 }
             }
 
-            monthDiv.appendChild(grid);
-            container.appendChild(monthDiv);
-        });
-    </script>
+            function seedContributions(contributionData) {
+                months.forEach((monthName, monthIndex) => {
+                    console.log(monthName + " " + contriData[String(monthIndex)])
+                    let eachMonthContributions = contriData[String(monthIndex)]
 
-    {% endblock %}
+                    if (eachMonthContributions) {
+                        eachMonthContributions.forEach((dayContri, index) => {
+
+
+                            if (dayContri) {
+                                console.log(contributionData)
+                                console.log(contributionData[monthIndex], monthName)
+                                console.log(dayContri["dateData"][0], dayContri["dateData"][1])
+
+
+
+                                contributionData[monthIndex][dayContri["dateData"][0] - 1] = dayContri["dateData"][1];
+                            }
+
+                        })
+                    }
+                })
+                return contributionData;
+            }
+
+
+
+            // Generate random contributions
+            function generateRandomContributions() {
+                let data = {};
+                const year = new Date().getFullYear();
+                for (let m = 0; m < 12; m++) {
+                    const daysInMonth = new Date(year, m + 1, 0).getDate();
+                    data[m] = [];
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        data[m].push(Math.floor(Math.random() * 12));
+                    }
+                }
+                return data;
+            }
+
+            function getContributionLevel(count) {
+                if (count <= 0) return 0;
+                if (count <= 2) return 1;
+                if (count <= 4) return 2;
+                if (count <= 6) return 3;
+                return 4;
+            }
+
+            const container = document.getElementById("contribution-grid");
+
+            // console.log(contriData["10"].length);
+            // contriData.forEach((monthName, monthIndex) => {
+            //     console.log(contributions[0]);
+            // });
+
+
+
+
+
+
+
+
+            months.forEach((monthName, monthIndex) => {
+
+                const monthDiv = document.createElement("div");
+                monthDiv.className = "month";
+
+                const monthLabel = document.createElement("div");
+                monthLabel.className = "month-name";
+                monthLabel.textContent = monthName;
+                monthDiv.appendChild(monthLabel);
+
+                const grid = document.createElement("div");
+                grid.className = "grid";
+
+                const days = contributions[monthIndex];
+                // console.log(days)
+
+                const firstDay = new Date(new Date().getFullYear(), monthIndex, 1).getDay(); // 0=Sunday
+                const totalWeeks = Math.ceil((firstDay + days.length) / 7);
+
+                for (let w = 0; w < totalWeeks; w++) {
+
+                    for (let d = 0; d < 7; d++) {
+                        const dayIndex = w * 7 + d - firstDay;
+
+                        const dayDiv = document.createElement("div");
+                        dayDiv.className = "day";
+
+
+                        if (dayIndex >= 0 && dayIndex < days.length) {
+
+                            const level = getContributionLevel(days[dayIndex]);
+                            if (level) dayDiv.classList.add(`level-${level}`);
+                        }
+
+                        if (dayIndex >= 0 && dayIndex <= calculateDaysForMonth(monthIndex)) {
+                            grid.appendChild(dayDiv);
+
+                        } else {
+                            // console.log(calculateDaysForMonth(monthIndex))
+                            const emptyDay = document.createElement("div");
+                            emptyDay.className = "empty"
+                            grid.appendChild(emptyDay);
+                        }
+                    }
+                }
+
+                monthDiv.appendChild(grid);
+                container.appendChild(monthDiv);
+            });
+        </script>
+
+        {% endblock %}
