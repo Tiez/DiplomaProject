@@ -153,32 +153,34 @@ def logout():
     return redirect(url_for("login"))
 
 @login_required
-@app.route("/contributions")
-def getContributions():
-
+@app.route("/contributions/<int:id>")
+def getContributions(id):
     conn = get_db_connection()
-    contributions = conn.execute("SELECT contribution_date, count FROM contributions WHERE user_id = ? AND contribution_date >= '2025-01-01' AND contribution_date <= '2025-12-31' ORDER BY contribution_date;", (current_user.id,)).fetchall()
+    contributions = conn.execute("SELECT contribution_date, count FROM contributions WHERE user_id = ? AND contribution_date >= '2025-01-01' AND contribution_date <= '2025-12-31' ORDER BY contribution_date;", (id,)).fetchall()
     conn.close()
-
-
     contributions_dict = defaultdict(list)
-
     for contribution in contributions:
-            # If row is a tuple: (contribution_date, count)
         date_str, count = contribution
-        
-            # Convert date string to datetime object
         date_obj = datetime.strptime(date_str, "%Y-%m-%d")
         month_index = date_obj.month - 1  # 0=Jan, 11=Dec
         contributions_dict[month_index].append({"dateData": [date_obj.day, count]})
-        
     return json.dumps(dict(contributions_dict))
 
+@login_required
+@app.route("/profile_data/<int:id>")
+def profile_data(id):
+    conn = get_db_connection()
+    data = conn.execute("SELECT id, username, email FROM users WHERE id = ?;", (id,)).fetchone()
+    conn.close()
+
+    
+    print({"userData": dict(data)})
+    return jsonify({"userData": dict(data)})
 
 @login_required
 @app.route("/profile/<int:id>")
 def profile(id):
-    return render_template("UserProfile.html")
+    return render_template("UserProfile.html", userID={"id":id, "username":current_user.username})
 
 @login_required
 @app.route("/problemsheet")
@@ -365,7 +367,7 @@ def get_problem(id):
     problem = conn.execute("SELECT * FROM problems WHERE id=?", (id,)).fetchone()
     test_cases = conn.execute("SELECT * FROM test_cases WHERE problem_id=?", (id,)).fetchall()
     conn.close()
-    print(dict(problem),"\n")
+ 
     return jsonify({
         "problem": dict(problem),
         "test_cases": [dict(tc) for tc in test_cases]
@@ -375,21 +377,21 @@ def get_problem(id):
 @app.route("/userHistory/<int:userID>")
 @login_required
 def userHistory(userID):
-    if userID == current_user.id:
-        conn = get_db_connection()
-        fetchedData = conn.execute("SELECT * FROM submissions WHERE userID=? ORDER BY subTime DESC LIMIT 20", (userID,)).fetchall()
-        conn.close()
+    # if userID == current_user.id:
+    conn = get_db_connection()
+    fetchedData = conn.execute("SELECT * FROM submissions WHERE userID=? ORDER BY subTime DESC LIMIT 20", (userID,)).fetchall()
+    conn.close()
 
-        # print([dict(fetchedData)])
 
-        return jsonify({
-            "userID": userID,
-            "data": [dict(fd) for fd in fetchedData]
-        })
+
     return jsonify({
-        "error": f"user ID miss match. Target id {userID}, current id {current_user.id}",
-
+        "userID": userID,
+        "data": [dict(fd) for fd in fetchedData]
     })
+    # return jsonify({
+    #     "error": f"user ID miss match. Target id {userID}, current id {current_user.id}",
+
+    # })
 
 
 # ---------------------- Worker & Submission Queue ----------------------
@@ -465,8 +467,7 @@ if __name__ == "__main__":
 
 
     conn = get_db_connection()
-    print("=====================")
-    print(current_user, " user id\n")
+
 
     conn.execute("""
     INSERT INTO contributions (user_id, contribution_date, count)
@@ -544,7 +545,7 @@ if __name__ == "__main__":
                
                 stdout_lines = " \n".join(stdout_lines)
                 output_json = {"error":stdout_lines[58:]}
-                print(stdout_lines)
+
                 
             print(output_json)
 
@@ -641,9 +642,6 @@ if __name__ == "__main__":
             ( "Time Limit", "0.0", "", submission_id ))
 
             for submissionTestCase in results:
-                print("what???")
-
-                print(submissionTestCase)
                 conn.execute(
                 "INSERT INTO testcaseSub (subID, input, expected, printed, output, verdict, error) VALUES(?, ?, ?, ?, ?, ?, ?)",
                 ( submission_id, str(submissionTestCase["input"]), submissionTestCase["expected"], submissionTestCase["printed"], submissionTestCase["output"], submissionTestCase["verdict"],  submissionTestCase["error"])

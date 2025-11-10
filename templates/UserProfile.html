@@ -172,7 +172,7 @@
     }
 
     .level-1 {
-        background-color: #17331c;
+        background-color: #1d4223;
     }
 
     .level-2 {
@@ -202,7 +202,7 @@
 
     .problem {
         font-weight: 600;
-        color: #58a6ff;
+        color: #5786bc;
         align-items: center;
 
     }
@@ -222,14 +222,18 @@
         <div class="user_section">
             <div style="display: flex; justify-content: start;">
                 <img class="profile_picture" src="../../static/pictures/Defaultuser.png">
-                <div class="name">
-                    {{ current_user.username }}
+                <div class="name" id="username">
+                    {{ userID["username"] }}
                 </div>
             </div>
-            <div class="bio_section">
+            <div class="bio_section" id="bio">
                 Bio section testing. It has to be a long text so im making this filler texts
             </div>
-            <div class="user_trophies">Trophies</div>
+            {% if current_user.id == userID["id"] %}
+            <a hreg="/dashboard">Edit Profile</a>
+            {% endif %}
+            <div class=" user_trophies">Trophies
+            </div>
         </div>
 
         <div class="user_info">
@@ -255,17 +259,33 @@
 
 
         <script type="module">
-            const userID = {{ current_user.id }};
-            fetch(`/userHistory/${userID}`)
+            async function loadUser(userID) {
+                console.log("????")
+                const res = await fetch('/profile_data/' + {{ userID["id"] }});
+            const user = await res.json();
+            console.log(user)
+            document.getElementById("username").innerText = user["userData"]["username"];
+            document.getElementById("bio").innerText = user["userData"]["email"];
+                // ... update all fields dynamically
+            }
+
+            loadUser();
+
+
+
+
+            const userIDs = {{ userID["id"] }};
+            fetch('/userHistory/' + {{ userID["id"] }})
                 .then(response => response.json())
                 .then(data => {
                     // Example: render submissions
                     const container = document.getElementById('user_history');
+
                     data.data.forEach(sub => {
                         fetch(`/problem/${sub.problem_id}`)
                             .then(response => response.json())
                             .then(prob => {
-                                console.log(prob["problem"])
+
 
 
                                 const div = document.createElement('div');
@@ -302,7 +322,11 @@
 
             let contriData;
 
-            const response = await fetch('/contributions');
+            const response = await fetch('/contributions/' + {{ userID["id"] }});
+
+
+
+
             if (!response.ok) throw new Error('Network response was not ok');
 
             const data = await response.json();
@@ -355,21 +379,12 @@
 
             function seedContributions(contributionData) {
                 months.forEach((monthName, monthIndex) => {
-
                     let eachMonthContributions = contriData[String(monthIndex)]
-
                     if (eachMonthContributions) {
                         eachMonthContributions.forEach((dayContri, index) => {
-
-
                             if (dayContri) {
-
-
-
-
                                 contributionData[monthIndex][dayContri["dateData"][0] - 1] = dayContri["dateData"][1];
                             }
-
                         })
                     }
                 })
