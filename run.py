@@ -365,6 +365,7 @@ def get_problem(id):
     problem = conn.execute("SELECT * FROM problems WHERE id=?", (id,)).fetchone()
     test_cases = conn.execute("SELECT * FROM test_cases WHERE problem_id=?", (id,)).fetchall()
     conn.close()
+    print(dict(problem),"\n")
     return jsonify({
         "problem": dict(problem),
         "test_cases": [dict(tc) for tc in test_cases]
@@ -376,7 +377,7 @@ def get_problem(id):
 def userHistory(userID):
     if userID == current_user.id:
         conn = get_db_connection()
-        fetchedData = conn.execute("SELECT * FROM submissions WHERE userID=? ORDER BY subTime DESC LIMIT 100", (userID,)).fetchall()
+        fetchedData = conn.execute("SELECT * FROM submissions WHERE userID=? ORDER BY subTime DESC LIMIT 20", (userID,)).fetchall()
         conn.close()
 
         # print([dict(fetchedData)])
@@ -472,7 +473,8 @@ if __name__ == "__main__":
     VALUES (?, ?, 1)
     ON CONFLICT(user_id, contribution_date)
     DO UPDATE SET count = count + 1;
-    """, (user_id, "2025-11-09"))
+    """, (user_id, datetime.today().strftime('%Y-%m-%d')))
+    print("=======================")
     conn.commit()
     conn.close()
 
