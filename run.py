@@ -370,6 +370,27 @@ def get_problem(id):
         "test_cases": [dict(tc) for tc in test_cases]
     })
 
+
+@app.route("/userHistory/<int:userID>")
+@login_required
+def userHistory(userID):
+    if userID == current_user.id:
+        conn = get_db_connection()
+        fetchedData = conn.execute("SELECT * FROM submissions WHERE userID=? ORDER BY subTime DESC LIMIT 100", (userID,)).fetchall()
+        conn.close()
+
+        # print([dict(fetchedData)])
+
+        return jsonify({
+            "userID": userID,
+            "data": [dict(fd) for fd in fetchedData]
+        })
+    return jsonify({
+        "error": f"user ID miss match. Target id {userID}, current id {current_user.id}",
+
+    })
+
+
 # ---------------------- Worker & Submission Queue ----------------------
 NUM_WORKERS = 3
 results_map = {}
@@ -443,6 +464,7 @@ if __name__ == "__main__":
 
 
     conn = get_db_connection()
+    print("=====================")
     print(current_user, " user id\n")
 
     conn.execute("""
