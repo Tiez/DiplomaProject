@@ -299,10 +299,82 @@ def index():
 @app.route("/admin/problems")
 @admin_required
 def adminProblem():
+    # Server-side admin listing with pagination, search, difficulty and topic filters
+    try:
+        page = int(request.args.get("page", 1))
+    except ValueError:
+        page = 1
+    try:
+        per_page = int(request.args.get("per_page", 10))
+    except ValueError:
+        per_page = 10
+
+    q = request.args.get("q", "").strip()
+    category = request.args.get("category", "all").strip()
+    topics_selected = request.args.getlist("topics")
+
     conn = get_db_connection()
-    problems = conn.execute('SELECT * FROM problems').fetchall()
+    params = []
+    where = []
+
+    if q:
+        qparam = f"%{q.lower()}%"
+        where.append("(LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(IFNULL(tags,'')) LIKE ?)")
+        params.extend([qparam, qparam, qparam])
+
+    if category and category.lower() != "all":
+        where.append("LOWER(TRIM(diff)) LIKE ?")
+        params.append(f"%{category.lower()}%")
+
+    # topics filter will be matched against tags column if present, otherwise fallback to title/description
+    cols_info = conn.execute("PRAGMA table_info(problems)").fetchall()
+    cols = [c["name"] for c in cols_info]
+    has_tags = "tags" in cols
+
+    if topics_selected:
+        topics = [t.strip() for t in topics_selected if t.strip()]
+        if topics:
+            if has_tags:
+                topic_clauses = []
+                for _ in topics:
+                    topic_clauses.append("LOWER(tags) LIKE ?")
+                    params.append(f"%{_.lower()}%")
+                where.append("(" + " OR ".join(topic_clauses) + ")")
+            else:
+                topic_clauses = []
+                for _ in topics:
+                    topic_clauses.append("(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
+                    params.extend([f"%{_.lower()}%", f"%{_.lower()}%"])
+                where.append("(" + " OR ".join(topic_clauses) + ")")
+
+    where_sql = ""
+    if where:
+        where_sql = "WHERE " + " AND ".join(where)
+
+    count_row = conn.execute(f"SELECT COUNT(*) as cnt FROM problems {where_sql}", params).fetchone()
+    total = count_row["cnt"] if count_row else 0
+
+    offset = (page - 1) * per_page
+
+    select_cols = "id, title, description, diff, IFNULL(tags,'') as tags"
+    rows = conn.execute(
+        f"SELECT {select_cols} FROM problems {where_sql} ORDER BY id LIMIT ? OFFSET ?",
+        params + [per_page, offset]
+    ).fetchall()
     conn.close()
-    return render_template("admin/adminProblems.html", problems=problems)
+
+    problems = [dict(r) for r in rows]
+
+    return render_template(
+        "admin/adminProblems.html",
+        problems=problems,
+        page=page,
+        per_page=per_page,
+        total=total,
+        q=q,
+        category=category,
+        topics_selected=topics_selected
+    )
 
 @app.route('/admin/news', methods=['GET', 'POST'])
 @admin_required
@@ -379,11 +451,25 @@ def delete_problem(id):
 @app.route('/admin/submissions')
 @admin_required
 def adminSubmissions():
+    # Paginated admin submissions list
+    try:
+        page = int(request.args.get('page', 1))
+    except (ValueError, TypeError):
+        page = 1
+    try:
+        per_page = int(request.args.get('per_page', 20))
+    except (ValueError, TypeError):
+        per_page = 20
+
     conn = get_db_connection()
-    submissions = conn.execute('SELECT * FROM submissions ORDER BY subTime DESC').fetchall()
+    count_row = conn.execute("SELECT COUNT(*) as cnt FROM submissions").fetchone()
+    total = count_row["cnt"] if count_row else 0
+
+    offset = (page - 1) * per_page
+    submissions = conn.execute('SELECT * FROM submissions ORDER BY subTime DESC LIMIT ? OFFSET ?', (per_page, offset)).fetchall()
     conn.close()
     submissions = [dict(row) for row in submissions]
-    return render_template('admin/adminSub.html', submissions=submissions)
+    return render_template('admin/adminSub.html', submissions=submissions, page=page, per_page=per_page, total=total)
 
 @app.route('/admin/system')
 @admin_required

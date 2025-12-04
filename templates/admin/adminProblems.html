@@ -362,12 +362,43 @@
     <div id="top">
         <a class="add-btn" href="{{ url_for('add_problem') }}">Add New Problem</a>
 
-        <div style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-                    font-size: 20px;">
-            search:
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+            <input id="q" type="search" placeholder="Search title / description / tags..." value="{{ q or '' }}"
+                style="padding:8px 10px; border-radius:8px; border:1px solid #333; background:#111; color:#eee; min-width:280px;">
+
+            <select id="category"
+                style="padding:8px; border-radius:8px; background:#111; color:#eee; border:1px solid #333;">
+                <option value="all" {% if category=='all' or not category %}selected{% endif %}>All difficulties
+                </option>
+                <option value="Easy" {% if category and category|lower=='easy' %}selected{% endif %}>Easy</option>
+                <option value="Medium" {% if category and category|lower=='medium' %}selected{% endif %}>Medium</option>
+                <option value="Hard" {% if category and category|lower=='hard' %}selected{% endif %}>Hard</option>
+            </select>
+
+            <select id="per_page"
+                style="padding:8px; border-radius:8px; background:#111; color:#eee; border:1px solid #333;">
+                <option value="5" {% if per_page==5 %}selected{% endif %}>5 / page</option>
+                <option value="10" {% if per_page==10 %}selected{% endif %}>10 / page</option>
+                <option value="20" {% if per_page==20 %}selected{% endif %}>20 / page</option>
+            </select>
+
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; max-width:420px;">
+                <label style="font-size:13px; color:#ddd; margin-right:6px;">Topics:</label>
+                {% set topic_list =
+                ['Array','String','Math','Sorting','DP','Graph','Greedy','TwoPointers','Hashing','Recursion','BinarySearch','Tree','LinkedList','Stack','Queue','Bit','Geometry','NumberTheory']
+                %}
+                {% for t in topic_list %}
+                <label style="margin-right:6px; color:#ddd;">
+                    <input type="checkbox" class="topic-checkbox" value="{{ t }}" {% if topics_selected and (t in
+                        topics_selected) %}checked{% endif %}>
+                    {{ t }}
+                </label>
+                {% endfor %}
+            </div>
+
+            <button id="applyFilters"
+                style="padding:8px 12px; border-radius:8px; background:#3b82f6; color:#fff; border:none;">Apply</button>
         </div>
-        <input placeholder="Enter Title" id="searchBar" type="text">
-        <button id="searchButton">Search</button>
     </div>
 
     <div id="header">
@@ -399,7 +430,32 @@
         {% endfor %}
     </div>
 
-    <div id="footer"></div>
+    <div id="footer">
+        {% if total %}
+        {% set total_pages = (total // per_page) + (1 if total % per_page else 0) %}
+        <div style="display:flex; justify-content:center; gap:8px; padding:12px; flex-wrap:wrap;">
+            {% if page > 1 %}
+            <a class="add-btn"
+                href="{{ url_for('adminProblem') }}?page={{ page-1 }}&per_page={{ per_page }}&q={{ q|urlencode }}&category={{ category|urlencode }}{% for t in topics_selected %}&topics={{ t|urlencode }}{% endfor %}">Prev</a>
+            {% endif %}
+
+            {% for p in range(1, total_pages+1) %}
+            {% if p == page %}
+            <span class="add-btn" style="background:#3b82f6;">{{ p }}</span>
+            {% else %}
+            <a class="add-btn"
+                href="{{ url_for('adminProblem') }}?page={{ p }}&per_page={{ per_page }}&q={{ q|urlencode }}&category={{ category|urlencode }}{% for t in topics_selected %}&topics={{ t|urlencode }}{% endfor %}">{{
+                p }}</a>
+            {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %} <a class="add-btn"
+                href="{{ url_for('adminProblem') }}?page={{ page+1 }}&per_page={{ per_page }}&q={{ q|urlencode }}&category={{ category|urlencode }}{% for t in topics_selected %}&topics={{ t|urlencode }}{% endfor %}">
+                Next</a>
+                {% endif %}
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endif %}
 
@@ -408,30 +464,39 @@
 
 <script>
 
+    {% if edits %}
     window.onload = function () {
-        refreshSlots("{{ problem_id }}"); // pass problem_id from Jinja
-
+        // Only attempt to populate the edit form when we're in edit mode and problem_id is available.
+        const pid = "{{ problem_id }}";
+        if (pid && pid !== "None") {
+            refreshSlots(pid);
+        }
     }
+    {% endif %}
 
 
-    document.getElementById("searchButton").addEventListener("click", function (e) {
+    const searchBtn = document.getElementById("searchButton");
+    if (searchBtn) {
+        searchBtn.addEventListener("click", function (e) {
+            e.preventDefault(); // prevent refresh
 
-        e.preventDefault(); // prevent refresh
+            const searchBarEl = document.getElementById("searchBar");
+            const query = searchBarEl ? searchBarEl.value.toLowerCase() : "";
+            const items = document.querySelectorAll("#list-container #listItem");
 
-        let query = document.getElementById("searchBar").value.toLowerCase();
-        let items = document.querySelectorAll("#list-container #listItem");
+            items.forEach(item => {
+                const titleEl = item.querySelector(".TITLE");
+                const title = titleEl ? titleEl.innerText.toLowerCase() : "";
+                if (title.includes(query)) {
+                    item.style.display = "grid"; // keep grid
+                } else {
+                    item.style.display = "none";
+                }
+            });
 
-        items.forEach(item => {
-            let title = item.querySelector(".TITLE").innerText.toLowerCase();
-            if (title.includes(query)) {
-                item.style.display = "grid"; // keep grid
-            } else {
-                item.style.display = "none";
-            }
+            if (searchBarEl) searchBarEl.value = "";
         });
-
-        document.getElementById("searchBar").value = "";
-    });
+    }
     async function refreshSlots(problemId) {
         try {
 
@@ -469,6 +534,31 @@
             console.error("error:", err);
         }
     }
+
+    // Apply filters button handler - build query params and navigate
+    (function () {
+        const applyBtn = document.getElementById("applyFilters");
+        if (applyBtn) {
+            applyBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+                const params = new URLSearchParams();
+                params.set("page", 1);
+                const perPageEl = document.getElementById("per_page");
+                const perPage = perPageEl ? perPageEl.value : "10";
+                params.set("per_page", perPage);
+                const qEl = document.getElementById("q");
+                const q = qEl ? qEl.value.trim() : "";
+                if (q) params.set("q", q);
+                const catEl = document.getElementById("category");
+                const category = catEl ? catEl.value : "all";
+                if (category) params.set("category", category);
+                document.querySelectorAll(".topic-checkbox:checked").forEach(cb => {
+                    params.append("topics", cb.value);
+                });
+                window.location = "/admin/problems?" + params.toString();
+            });
+        }
+    })();
 </script>
 
 {% endblock %}

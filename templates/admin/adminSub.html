@@ -243,6 +243,29 @@
     {% endfor %}
 </div>
 
+<div id="sub-pagination">
+    {% if total %}
+    {% set total_pages = (total // per_page) + (1 if total % per_page else 0) %}
+    <div style="display:flex; justify-content:center; gap:8px; padding:12px; flex-wrap:wrap;">
+        {% if page > 1 %}
+        <a class="add-btn" href="{{ url_for('adminSubmissions') }}?page={{ page-1 }}&per_page={{ per_page }}">Prev</a>
+        {% endif %}
+
+        {% for p in range(1, total_pages+1) %}
+        {% if p == page %}
+        <span class="add-btn" style="background:#3b82f6;">{{ p }}</span>
+        {% else %}
+        <a class="add-btn" href="{{ url_for('adminSubmissions') }}?page={{ p }}&per_page={{ per_page }}">{{ p }}</a>
+        {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %} <a class="add-btn"
+            href="{{ url_for('adminSubmissions') }}?page={{ page+1 }}&per_page={{ per_page }}">Next</a>
+            {% endif %}
+    </div>
+    {% endif %}
+</div>
+
 <script>
     function toggleDropdown(subId, btn) {
         const panel = document.getElementById('dropdown-' + subId);
