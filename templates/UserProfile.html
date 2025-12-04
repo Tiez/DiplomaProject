@@ -176,11 +176,11 @@
     }
 
     .level-2 {
-        background-color: #246d35;
+        background-color: #1f5f2e;
     }
 
     .level-3 {
-        background-color: #4fc765;
+        background-color: #359646;
     }
 
     .level-4 {
@@ -229,8 +229,8 @@
             <div class="bio_section" id="bio">
                 Bio section testing. It has to be a long text so im making this filler texts
             </div>
-            {% if current_user.id == userID["id"] %}
-            <a hreg="/dashboard">Edit Profile</a>
+            {% if current_user.is_authenticated and current_user.id == userID["id"] %}
+            <a href="{{ url_for('profile', id=current_user.id) }}">Edit Profile</a>
             {% endif %}
             <div class=" user_trophies">Trophies
             </div>

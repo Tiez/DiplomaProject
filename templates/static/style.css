@@ -1,0 +1,148 @@
+/* Global site form & card styles - added to make Login/Register look consistent with Homepage/Profile/Dashboard */
+
+/* Card */
+.card {
+    background: linear-gradient(180deg, #0f0f0f, #141414);
+    border: 1px solid #222;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card.shadow {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Inputs & labels */
+.input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #2b2b2b;
+    background: #0d0d0d;
+    color: #e6e6e6;
+    font-size: 14px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box;
+}
+
+.input::placeholder {
+    color: #9a9a9a;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #7d91ff;
+    box-shadow: 0 8px 24px rgba(125, 145, 255, 0.08);
+}
+
+/* Buttons */
+.nav-btn {
+    display: inline-block;
+    background: linear-gradient(90deg, #6f7dff, #ff9a9a);
+    color: #071021;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s;
+}
+
+.nav-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(111, 125, 255, 0.12);
+}
+
+/* Secondary link button */
+.btn-secondary {
+    display: inline-block;
+    background: none;
+    color: #cfcfcf;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #2b2b2b;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Flash messages and inline errors */
+.flash {
+    background: #241313;
+    border: 1px solid #4d1f1f;
+    color: #ffb3b3;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.inline-error {
+    color: #ff6b6b;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+/* Form helpers */
+.form-row {
+    margin-bottom: 12px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #e6e6e6;
+    font-size: 14px;
+}
+
+/* Small helper text (password requirements) */
+.helper-text {
+    color: #bfbfbf;
+    font-size: 13px;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.helper-text ul {
+    margin: 6px 0 0 18px;
+    padding: 0;
+}
+
+/* Form footer (submit + link) */
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 540px) {
+    .card-body {
+        padding: 14px;
+    }
+
+    .nav-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Small utilities */
+.text-center {
+    text-align: center;
+}
+
+.mt-3 {
+    margin-top: 12px;
+}
+
+.mb-2 {
+    margin-bottom: 8px;
+}
