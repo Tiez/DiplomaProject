@@ -1,0 +1,57 @@
+{% extends "admin/admin.html" %}
+{% block title %}Admin - News{% endblock %}
+
+{% block content %}
+<div style="padding: 20px; max-width: 900px; margin: 0 auto;">
+    <h2 style="margin-bottom: 12px;">Manage News</h2>
+
+    <section style="background: #0f0f0f; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+        <form method="POST" action="{{ url_for('adminNews') }}">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <input name="title" placeholder="Title" required
+                    style="padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#eee;">
+                <textarea name="desc" placeholder="Description" required rows="4"
+                    style="padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#eee;"></textarea>
+                <input name="link" placeholder="Optional link (https://...)"
+                    style="padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#eee;">
+                <div style="display:flex; gap:8px;">
+                    <button type="submit"
+                        style="padding:8px 12px; background:#3b82f6; color:white; border-radius:6px; border:none;">Add
+                        News</button>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h3 style="margin-bottom:8px;">Existing Articles</h3>
+        {% if articles %}
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            {% for article in articles %}
+            <div
+                style="padding:12px; border-radius:8px; background:#0f0f0f; display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="max-width:75%;">
+                    <div style="font-size:18px; font-weight:600; color:#fff;">{{ article.title }}</div>
+                    <div style="font-size:12px; color:#8b8b8b; margin-bottom:6px;">{{ article.time[:10] }}</div>
+                    <div style="color:#ddd; margin-bottom:8px;">{{ article.desc }}</div>
+                    {% if article.link %}
+                    <div><a style="color:#60a5fa;" href="{{ article.link }}" target="_blank" rel="noopener">Open
+                            link</a></div>
+                    {% endif %}
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                    <form method="POST" action="{{ url_for('adminNews') }}">
+                        <input type="hidden" name="delete_id" value="{{ article.id }}">
+                        <button type="submit"
+                            style="padding:6px 10px; background:#ef4444; color:white; border-radius:6px; border:none;">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:#9ca3af;">No articles yet.</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

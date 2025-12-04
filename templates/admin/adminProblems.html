@@ -156,7 +156,7 @@
     /* Header row */
     #header {
         display: grid;
-        grid-template-columns: 0.2fr 2fr 6fr 1fr 1fr;
+        grid-template-columns: 0.2fr 2fr 6fr 2fr 1fr 1fr;
         align-items: center;
         gap: 10px;
         background-color: #2a2a2a;
@@ -171,7 +171,7 @@
     /* Each row */
     #listItem {
         display: grid;
-        grid-template-columns: 0.2fr 2fr 6fr 1fr 1fr;
+        grid-template-columns: 0.2fr 2fr 6fr 2fr 1fr 1fr;
         align-items: center;
         gap: 10px;
         background-color: #1e1e1e;
@@ -303,6 +303,10 @@
                     <input type="radio" name="diff" value="Hard" required>
                 </div>
 
+                <label>Tags (comma-separated)</label>
+                <input class="textSection" type="text" id="tags" name="tags" placeholder="e.g. Array,String,Math"
+                    value="{{ problem.tags if problem else '' }}">
+
                 {% if add %}
                 <button type="submit">Add Problem</button>
                 {% else %}
@@ -371,6 +375,7 @@
         <div class="TITLE">Title</div>
 
         <div class="DESC">Description</div>
+        <div class="DESC">Tags</div>
         <div class="DESC">Difficulty</div>
         <div class="ACT">Actions</div>
     </div>
@@ -381,6 +386,7 @@
             <div class="ID">{{ p.id }}</div>
             <div class="TITLE">{{ p.title }}</div>
             <div class="DESC">{{ p.description }}</div>
+            <div class="DESC">{{ p.tags if p.tags else '' }}</div>
             <div
                 class="difficulty {% if p.diff == 'Easy' %}easy{% elif p.diff == 'Medium' %}medium{% elif p.diff == 'Hard' %}hard{% endif %}">
                 {{ p.diff | capitalize }}</div>
@@ -454,6 +460,8 @@
             if (example) example.value = p.examples || "";
             if (constraints) constraints.value = p.constraints || "";
             if (prefix) prefix.value = p.prefix || "";
+            const tagsEl = document.getElementById("tags");
+            if (tagsEl) tagsEl.value = p.tags || "";
 
 
 

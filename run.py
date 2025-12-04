@@ -187,6 +187,104 @@ def profile(id):
 def problemsheet():
     return render_template("ProblemSheet.html")
 
+@app.route("/api/problems")
+@login_required
+def api_problems():
+    # Server-side pagination and search for problemsheet
+    try:
+        page = int(request.args.get("page", 1))
+    except ValueError:
+        page = 1
+    try:
+        per_page = int(request.args.get("per_page", 10))
+    except ValueError:
+        per_page = 10
+
+    q = request.args.get("q", "").strip()
+    category = request.args.get("category", "").strip()
+    topics = request.args.getlist("topics")  # may be multiple
+
+    conn = get_db_connection()
+    params = []
+    where_clauses = []
+
+    # Use case-insensitive searching by lowercasing fields and parameters
+    if q:
+        qparam = f"%{q.lower()}%"
+        where_clauses.append("(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
+        params.extend([qparam, qparam])
+
+    # difficulty filter (case-insensitive, allow partial matches)
+    if category and category.lower() != "all":
+        where_clauses.append("LOWER(TRIM(diff)) LIKE ?")
+        params.append(f"%{category.lower()}%")
+
+    # detect if problems table has a 'tags' column
+    cols_info = conn.execute("PRAGMA table_info(problems)").fetchall()
+    cols = [c["name"] for c in cols_info]
+    has_tags = "tags" in cols
+
+    # topics filter: if tags column exists, match against it; otherwise fallback to searching title/description
+    if topics:
+        # normalize and remove empty
+        topics = [t.strip() for t in topics if t.strip()]
+        if topics:
+            if has_tags:
+                topic_clauses = []
+                for _ in topics:
+                    topic_clauses.append("LOWER(tags) LIKE ?")
+                    params.append(f"%{_.lower()}%")
+                where_clauses.append("(" + " OR ".join(topic_clauses) + ")")
+            else:
+                # fallback: search topics in LOWER(title) or LOWER(description)
+                topic_clauses = []
+                for _ in topics:
+                    topic_clauses.append("(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)")
+                    params.extend([f"%{_.lower()}%", f"%{_.lower()}%"])
+                where_clauses.append("(" + " OR ".join(topic_clauses) + ")")
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    # total count
+    count_row = conn.execute(f"SELECT COUNT(*) as cnt FROM problems {where_sql}", params).fetchone()
+    total = count_row["cnt"] if count_row else 0
+
+    offset = (page - 1) * per_page
+
+    # build select columns dynamically if tags exists
+    select_cols = "id, title, description, diff"
+    if has_tags:
+        select_cols += ", tags"
+
+    rows = conn.execute(
+        f"SELECT {select_cols} FROM problems {where_sql} ORDER BY id LIMIT ? OFFSET ?",
+        params + [per_page, offset]
+    ).fetchall()
+    conn.close()
+
+    problems = []
+    for r in rows:
+        desc = r["description"] or ""
+        snippet = desc if len(desc) <= 250 else desc[:247] + "..."
+        problem_obj = {
+            "id": r["id"],
+            "title": r["title"],
+            "diff": r["diff"],
+            "description": snippet
+        }
+        if has_tags:
+            problem_obj["tags"] = r["tags"] or ""
+        problems.append(problem_obj)
+
+    return jsonify({
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "problems": problems
+    })
+
 
 
 
@@ -206,6 +304,32 @@ def adminProblem():
     conn.close()
     return render_template("admin/adminProblems.html", problems=problems)
 
+@app.route('/admin/news', methods=['GET', 'POST'])
+@admin_required
+def adminNews():
+    conn = get_db_connection()
+    if request.method == 'POST':
+        # Delete action if delete_id provided
+        delete_id = request.form.get('delete_id')
+        if delete_id:
+            conn.execute('DELETE FROM news WHERE rowid = ?', (delete_id,))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('adminNews'))
+
+        # Otherwise treat as create
+        title = request.form.get('title')
+        desc = request.form.get('desc')
+        link = request.form.get('link', '')
+        if title and desc:
+            conn.execute('INSERT INTO news (title, desc, link) VALUES (?, ?, ?)', (title, desc, link))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('adminNews'))
+    articles = conn.execute('SELECT rowid as id, title, desc, time, link FROM news ORDER BY time DESC').fetchall()
+    conn.close()
+    return render_template('admin/adminNews.html', articles=articles)
+
 @app.route('/admin/problems/add', methods=['GET', 'POST'])
 @admin_required
 def add_problem():
@@ -216,9 +340,10 @@ def add_problem():
         prefix = request.form['prefix']
         constraints = request.form['constraints']
         diff = request.form['diff']
+        tags = request.form.get('tags', '')
         conn = get_db_connection()
-        conn.execute('INSERT INTO problems (title, description, examples, prefix, constraints, diff) VALUES (?, ?, ?, ?, ?, ?)',
-                     (title, description, examples, prefix, constraints, diff))
+        conn.execute('INSERT INTO problems (title, description, examples, prefix, constraints, diff, tags) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                     (title, description, examples, prefix, constraints, diff, tags))
         conn.commit()
         conn.close()
         return redirect(url_for('adminProblem'))
@@ -233,9 +358,10 @@ def edit_problem(id):
     if request.method == "POST":
         for problem in problems:
             if problem['id'] == id:
-                conn.execute('UPDATE problems SET title=? , description=?, examples=?, prefix=?, constraints=?, diff=? WHERE id=?',
+                tags = request.form.get('tags', '')
+                conn.execute('UPDATE problems SET title=? , description=?, examples=?, prefix=?, constraints=?, diff=?, tags=? WHERE id=?',
                              (request.form['title'], request.form['description'], request.form['example'], request.form['prefix'],
-                              request.form['constraints'], request.form['diff'], id))
+                              request.form['constraints'], request.form['diff'], tags, id))
                 conn.commit()
                 conn.close()
                 return redirect(url_for('adminProblem'))

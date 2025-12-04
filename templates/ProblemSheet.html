@@ -1,7 +1,340 @@
 {% extends "base.html" %}
-
+{% block title %}Problems{% endblock %}
 
 {% block content %}
-problem sheets
+<style>
+    .ps-container {
+        max-width: 1000px;
+        margin: 24px auto;
+        padding: 16px;
+    }
 
+    .ps-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .ps-search {
+        flex: 1 1 360px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .ps-search input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background: #fff;
+    }
+
+    .ps-filters {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .ps-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ps-card {
+        padding: 14px;
+        border-radius: 8px;
+        background: #0f0f0f;
+        color: #eaeaea;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        border: 1px solid #222;
+    }
+
+    .ps-card .meta {
+        color: #9ca3af;
+        font-size: 13px;
+        margin-bottom: 6px;
+    }
+
+    .ps-card .title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .ps-card .desc {
+        margin-top: 6px;
+        color: #d1d5db;
+    }
+
+    .badge {
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .badge.easy {
+        background: #10b981;
+    }
+
+    .badge.medium {
+        background: #f59e0b;
+    }
+
+    .badge.hard {
+        background: #ef4444;
+    }
+
+    .ps-pagination {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .ps-page-btn {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #111827;
+        color: #fff;
+        border: 1px solid #2b2b2b;
+        cursor: pointer;
+    }
+
+    .ps-page-btn.active {
+        background: #3b82f6;
+    }
+
+    .ps-empty {
+        color: #9ca3af;
+        text-align: center;
+        padding: 24px 0;
+    }
+
+    @media (max-width:700px) {
+        .ps-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
+
+<div class="ps-container">
+    <h2>Problems</h2>
+
+    <div class="ps-controls">
+        <div class="ps-search">
+            <input id="q" type="search" placeholder="Search problems by title or description..." />
+        </div>
+
+        <div class="ps-filters">
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label style="font-size:14px; margin-right:6px;">Topics:</label>
+                <label style="margin-right:8px;"><input type="checkbox" class="topic-checkbox" value="Array">
+                    Array</label>
+                <label style="margin-right:8px;"><input type="checkbox" class="topic-checkbox" value="String">
+                    String</label>
+                <label style="margin-right:8px;"><input type="checkbox" class="topic-checkbox" value="Math">
+                    Math</label>
+                <label style="margin-right:8px;"><input type="checkbox" class="topic-checkbox" value="Sorting">
+                    Sorting</label>
+                <label style="margin-right:8px;"><input type="checkbox" class="topic-checkbox" value="DP"> DP</label>
+                <label style="margin-right:8px;"><input type="checkbox" class="topic-checkbox" value="Graph">
+                    Graph</label>
+            </div>
+
+            <select id="category">
+                <option value="all">All difficulties</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+
+            <select id="per_page">
+                <option value="5">5 / page</option>
+                <option value="10" selected>10 / page</option>
+                <option value="20">20 / page</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="problems" class="ps-list" aria-live="polite"></div>
+
+    <div id="pagination" class="ps-pagination"></div>
+</div>
+
+<script>
+    (function () {
+        const problemsEl = document.getElementById('problems');
+        const paginationEl = document.getElementById('pagination');
+        const qEl = document.getElementById('q');
+        const catEl = document.getElementById('category');
+        const perPageEl = document.getElementById('per_page');
+
+        let state = { page: 1, per_page: 10, q: '', category: 'all', topics: [], total: 0 };
+
+        function debounce(fn, wait) {
+            let t;
+            return function (...args) {
+                clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), wait);
+            };
+        }
+
+        async function fetchProblems() {
+            const params = new URLSearchParams();
+            params.set('page', state.page);
+            params.set('per_page', state.per_page);
+            if (state.q) params.set('q', state.q);
+            if (state.category && state.category !== 'all') params.set('category', state.category);
+            if (state.topics && state.topics.length) {
+                for (const t of state.topics) {
+                    params.append('topics', t);
+                }
+            }
+
+            const res = await fetch(`/api/problems?${params.toString()}`, { credentials: 'same-origin' });
+            if (!res.ok) {
+                problemsEl.innerHTML = '<div class="ps-empty">Failed to load problems.</div>';
+                return;
+            }
+            const data = await res.json();
+            state.total = data.total;
+            renderProblems(data.problems);
+            renderPagination(data.page, data.per_page, data.total);
+        }
+
+        function renderProblems(list) {
+            if (!list || list.length === 0) {
+                problemsEl.innerHTML = '<div class="ps-empty">No problems found.</div>';
+                return;
+            }
+            problemsEl.innerHTML = '';
+            for (const p of list) {
+                const card = document.createElement('div');
+                card.className = 'ps-card';
+
+                const left = document.createElement('div');
+                left.style.flex = '1';
+
+                const title = document.createElement('div');
+                title.className = 'title';
+                title.textContent = p.title;
+
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = `#${p.id}`;
+
+                const desc = document.createElement('div');
+                desc.className = 'desc';
+                desc.textContent = p.description || '';
+
+                left.appendChild(title);
+                left.appendChild(meta);
+                left.appendChild(desc);
+
+                const right = document.createElement('div');
+                right.style.display = 'flex';
+                right.style.flexDirection = 'column';
+                right.style.alignItems = 'flex-end';
+                right.style.gap = '8px';
+
+                const badge = document.createElement('div');
+                badge.className = 'badge ' + (p.diff ? p.diff.toLowerCase() : 'easy');
+                badge.textContent = p.diff || 'N/A';
+
+                const view = document.createElement('a');
+                view.href = `/problem/${p.id}`;
+                view.textContent = 'Open';
+                view.style.color = '#60a5fa';
+                view.style.textDecoration = 'none';
+                view.style.fontWeight = '600';
+
+                right.appendChild(badge);
+                right.appendChild(view);
+
+                card.appendChild(left);
+                card.appendChild(right);
+                problemsEl.appendChild(card);
+            }
+        }
+
+        function renderPagination(page, per_page, total) {
+            paginationEl.innerHTML = '';
+            const totalPages = Math.max(1, Math.ceil(total / per_page));
+            const createBtn = (label, p, cls) => {
+                const b = document.createElement('button');
+                b.className = 'ps-page-btn' + (p === page ? ' active' : '');
+                if (cls) b.className += ' ' + cls;
+                b.textContent = label;
+                b.onclick = () => {
+                    if (p === page) return;
+                    state.page = p;
+                    fetchProblems();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+                return b;
+            };
+
+            // Prev
+            paginationEl.appendChild(createBtn('Prev', Math.max(1, page - 1)));
+            // Page numbers (show up to 7: current +-3)
+            const start = Math.max(1, page - 3);
+            const end = Math.min(totalPages, page + 3);
+            if (start > 1) {
+                paginationEl.appendChild(createBtn('1', 1));
+                if (start > 2) {
+                    const dots = document.createElement('span');
+                    dots.textContent = '...';
+                    dots.style.padding = '8px';
+                    paginationEl.appendChild(dots);
+                }
+            }
+            for (let p = start; p <= end; p++) {
+                paginationEl.appendChild(createBtn(String(p), p));
+            }
+            if (end < totalPages) {
+                if (end < totalPages - 1) {
+                    const dots = document.createElement('span');
+                    dots.textContent = '...';
+                    dots.style.padding = '8px';
+                    paginationEl.appendChild(dots);
+                }
+                paginationEl.appendChild(createBtn(String(totalPages), totalPages));
+            }
+            // Next
+            paginationEl.appendChild(createBtn('Next', Math.min(totalPages, page + 1)));
+        }
+
+        const debouncedSearch = debounce(() => {
+            state.page = 1;
+            state.q = qEl.value.trim();
+            fetchProblems();
+        }, 300);
+
+        qEl.addEventListener('input', debouncedSearch);
+        catEl.addEventListener('change', () => { state.page = 1; state.category = catEl.value; fetchProblems(); });
+        perPageEl.addEventListener('change', () => { state.per_page = parseInt(perPageEl.value, 10); state.page = 1; fetchProblems(); });
+        document.querySelectorAll('.topic-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                state.page = 1;
+                state.topics = Array.from(document.querySelectorAll('.topic-checkbox:checked')).map(c => c.value);
+                fetchProblems();
+            });
+        });
+
+        // initial load
+        fetchProblems();
+    })();
+</script>
 {% endblock %}

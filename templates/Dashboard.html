@@ -96,7 +96,7 @@
             <section class="article">
                 <div style="display: flex; flex-direction: column;">
                     <div class="article-title"> {{ article.title }} </div>
-                    <div class="article-time">{{ article.time }}</div>
+                    <div class="article-time">{{ article.time[:10] }}</div>
                 </div>
 
                 <div class="article-desc">{{ article.desc }}</div>
