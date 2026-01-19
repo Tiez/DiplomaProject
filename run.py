@@ -170,7 +170,7 @@ def getContributions(id):
 @app.route("/profile_data/<int:id>")
 def profile_data(id):
     conn = get_db_connection()
-    data = conn.execute("SELECT id, username, email FROM users WHERE id = ?;", (id,)).fetchone()
+    data = conn.execute("SELECT id, username, email, imageFile FROM users WHERE id = ?;", (id,)).fetchone()
     conn.close()
 
     
@@ -181,6 +181,40 @@ def profile_data(id):
 @app.route("/profile/<int:id>")
 def profile(id):
     return render_template("UserProfile.html", userID={"id":id, "username":current_user.username})
+
+@login_required
+@app.route("/profile/<int:id>/edit")
+def editProfile(id):
+
+    return render_template("editProfile.html", userID={"id":id, "username":current_user.username})
+
+@app.route("/updateProfile/<int:user_id>", methods=["PATCH"])
+@login_required
+def update_profile(user_id):
+    # Ensure the logged-in user is updating their own profile
+    if current_user.id != user_id:
+        abort(403)
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON body"}), 400
+
+    username = data.get("username")
+    email = data.get("email")
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if username:
+        user.username = username
+    if email:
+        user.email = email
+
+    db.session.commit()
+
+    return jsonify({"message": "Profile updated successfully"})
+
 
 @login_required
 @app.route("/problemsheet")

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+
+{% block style %}
+
+{% endblock %}
+
+{% block content %}
+
+
+<style>
+    .user_section {
+        display: flex;
+        flex-direction: column;
+        background-color: #1f1f1f;
+        border-radius: 10px;
+        padding: 15px;
+        margin-right: 10px;
+        flex: 1;
+        max-width: 300px;
+    }
+
+    .profile_picture {
+        width: 100px;
+        height: 100px;
+        border-radius: 10px;
+    }
+
+    .name {
+        padding: 0px 10px;
+        font-weight: bold;
+    }
+
+    .user_info {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        padding: 10px;
+        display: flex;
+        background-color: #1f1f1f;
+        border-radius: 10px;
+        padding: 15px;
+        margin-right: 10px;
+    }
+
+
+    .user_info label {
+        margin-top: 10px;
+        font-weight: bold;
+    }
+
+    .user_info input {
+        margin-top: 5px;
+        padding: 8px;
+        border-radius: 5px;
+        border: none;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .user_info button {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 5px;
+        border: none;
+        background-color: #85ff9b;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+    }
+</style>
+</head>
+
+<body>
+
+    <div style="display: flex; flex-direction: row;">
+
+        <div class="user_section">
+            <div style="display: flex; justify-content: start;">
+                <img class="profile_picture" src="../../static/ProfilePictures/Defaultuser.png">
+                <div class="name" id="username">
+                    {{ userID["username"] }}
+                </div>
+            </div>
+            <div class="bio_section" id="bio">
+                Bio section testing. It has to be a long text so im making this filler texts
+            </div>
+        </div>
+
+        <div class="user_info">
+            <h2>Edit Profile</h2>
+
+            <label for="usernameInput">Username</label>
+            <input type="text" id="usernameInput" placeholder="Username">
+
+            <label for="emailInput">Email</label>
+            <input type="email" id="emailInput" placeholder="Email">
+
+            <label for="usernameInput">Picture</label>
+            <input type="file" id="pictureInput" placeholder="Picture">
+
+            <button id="saveBtn">Save</button>
+        </div>
+
+
+
+
+
+
+
+        <script type="module">
+            const USER_ID = {{ userID["id"] }};
+
+            async function loadUser(userId) {
+                try {
+                    const res = await fetch(`/profile_data/${userId}`);
+                    if (!res.ok) throw new Error("Failed to fetch user data");
+
+                    const data = await res.json();
+                    const user = data.userData;
+
+                    document.getElementById("usernameInput").value = user.username;
+                    document.getElementById("emailInput").value = user.email;
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Error loading profile");
+                }
+            }
+
+            async function saveUser(userId) {
+                const username = document.getElementById("usernameInput").value;
+                const email = document.getElementById("emailInput").value;
+
+                try {
+                    const res = await fetch(`/updateProfile/${userId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username, email })
+                    });
+
+                    if (!res.ok) throw new Error("Failed to save profile");
+
+                    alert("Profile updated successfully!");
+                } catch (err) {
+                    console.error(err);
+                    alert("Error saving profile");
+                }
+            }
+
+            document.getElementById("saveBtn").addEventListener("click", () => {
+                saveUser(USER_ID);
+            });
+
+
+            document.getElementById("saveBtn").addEventListener("click", () => {
+                saveUser(USER_ID);
+            });
+
+            loadUser(USER_ID);
+        </script>
+
+        {% endblock %}

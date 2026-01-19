@@ -221,7 +221,7 @@
 
         <div class="user_section">
             <div style="display: flex; justify-content: start;">
-                <img class="profile_picture" src="../../static/pictures/Defaultuser.png">
+                <img class="profile_picture" src="../../static/ProfilePictures/Defaultuser.png">
                 <div class="name" id="username">
                     {{ userID["username"] }}
                 </div>
@@ -230,7 +230,7 @@
                 Bio section testing. It has to be a long text so im making this filler texts
             </div>
             {% if current_user.is_authenticated and current_user.id == userID["id"] %}
-            <a href="{{ url_for('profile', id=current_user.id) }}">Edit Profile</a>
+            <a href="{{ url_for('editProfile', id=current_user.id) }}">Edit Profile</a>
             {% endif %}
             <div class=" user_trophies">Trophies
             </div>
@@ -266,6 +266,7 @@
             console.log(user)
             document.getElementById("username").innerText = user["userData"]["username"];
             document.getElementById("bio").innerText = user["userData"]["email"];
+            document.getElementById("profile_picture").src = user["userData"]["imageFile"];
                 // ... update all fields dynamically
             }
 
