@@ -290,10 +290,35 @@ def api_problems():
 
 # ---------------------- Home ----------------------
 
-@app.route("/problem")
+@app.route("/editor/<int:id>")
 @login_required
-def index():
-    return render_template("index.html")
+def index(id):
+
+    return render_template("index.html", editor_id=id)
+
+
+# Contest page
+@app.route('/contest')
+@login_required
+def contest():
+    # placeholder static contests (no DB required)
+    contests = [
+        {"id": 1, "title": "Тэмцээн 1", "date": "2025-06-01", "description": "Сурын тэмцээн"},
+        {"id": 2, "title": "Тэмцээн 2", "date": "2025-07-15", "description": "Дижитал тэмцээн"}
+    ]
+    return render_template('Contest.html', contests=contests)
+
+
+# Lesson page
+@app.route('/lesson')
+@login_required
+def lesson():
+    # placeholder static lessons (no DB required)
+    lessons = [
+        {"id": 1, "title": "Хичээл 1", "summary": "Анхны ойлголт"},
+        {"id": 2, "title": "Хичээл 2", "summary": "Алгоритм ба өгөгдлийн бүтэц"}
+    ]
+    return render_template('Lesson.html', lessons=lessons)
 
 # ---------------------- Admin Routes ----------------------
 @app.route("/admin/problems")
@@ -758,7 +783,8 @@ if __name__ == "__main__":
                 stdout_lines = " \n".join(stdout_lines)
                 output_json = {"error":stdout_lines[58:]}
 
-                
+
+        
             print(output_json)
 
             if output_json is None:
@@ -777,6 +803,14 @@ if __name__ == "__main__":
                 returned_value = None
                 printed_output = ""
                 error_message = output_json["error"]
+
+                # error_message[5] = str(int() - 1)
+
+                if 'if __name__ == "__main__":' in error_message:
+                    error_message = "Please use 'return' to properly testcase your code"
+                else:
+                    error_message = error_message.replace(output_json["error"][5], str(int(output_json["error"][5]) - 1)) 
+                
                 results.append({
                     "input": args,
                     "expected": json.loads(case["expected"]),

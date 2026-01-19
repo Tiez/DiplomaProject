@@ -155,36 +155,163 @@
             border-radius: 10px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        /* Results list (LeetCode-like) */
+        .results-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #e0e0e0;
+        }
+
+        /* Tabs-style results */
+        .results-list {
             margin-top: 10px;
-            border-radius: 5px;
         }
 
-        th,
-        td {
-            border: 2px solid #525252;
+        .results-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            background: transparent;
+            color: #cbd5e1;
+            border: 1px solid #374151;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .tab-button.active {
+            background: #1f2937;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+
+        /* Status colors for tabs */
+        .tab-button.correct {
+            border-color: #065f46;
+            color: #bbf7d0;
+            background: rgba(6, 95, 70, 0.06);
+        }
+
+        .tab-button.wrong {
+            border-color: #7f1d1d;
+            color: #ffd6d6;
+            background: rgba(127, 29, 29, 0.06);
+        }
+
+        .tab-button.error {
+            border-color: #92400e;
+            color: #ffeecd;
+            background: rgba(146, 64, 14, 0.06);
+        }
+
+        .tab-content-area {
+            background: #0b1220;
+            border: 1px solid #172033;
+            padding: 12px;
+            border-radius: 8px;
+            color: #e6eef8;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .io pre {
+            display: inline-block;
+            background: #071029;
             padding: 6px;
-            text-align: left;
-            border-radius: 1px;
+            border-radius: 6px;
+            margin: 4px 0;
+            white-space: pre-wrap;
         }
 
-        th {
-            background-color: #1a1a1a;
+
+        .result-card {
+            display: flex;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #0f1724;
+            border: 1px solid #1f2937;
+            color: #e6eef8;
+            align-items: flex-start;
         }
 
-        .correct {
-            background-color: #455a4a;
+        .result-left {
+            width: 72px;
+            text-align: center;
         }
 
-        .wrong {
-            background-color: #573b3d;
+        .status {
+            font-weight: 700;
+            padding: 6px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            font-size: 12px;
         }
 
-        .error {
-            background-color: #5e5846;
+        .result-card.correct .status {
+            background: #065f46;
+            color: #d1fae5;
         }
+
+        .result-card.wrong .status {
+            background: #7f1d1d;
+            color: #ffe4e6;
+        }
+
+        .result-card.error .status {
+            background: #92400e;
+            color: #fff7ed;
+        }
+
+        .result-mid {
+            flex: 1;
+            font-size: 13px;
+            color: #e6eef8;
+        }
+
+        .io pre {
+            display: inline-block;
+            background: #071029;
+            padding: 6px;
+            border-radius: 6px;
+            margin: 4px 0;
+            white-space: pre-wrap;
+        }
+
+        .result-right {
+            width: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .open-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
 
         /* Monaco scrollbar */
         .monaco-editor .minimap {
@@ -205,6 +332,29 @@
         .monaco-scrollable-element>.scrollbar>.slider:hover {
             background: #545454 !important;
         }
+
+        /* Keep editor height stable: results area scrolls internally and won't resize editor */
+        #editor-results-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #editor-container {
+            flex: 1 1 auto;
+            min-height: 300px;
+            max-height: none;
+            overflow: hidden;
+        }
+
+        #editor {
+            height: 100%;
+            min-height: 300px;
+        }
+
+        #results-container {
+            flex: 0 0 260px;
+            overflow-y: auto;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
 </head>
@@ -213,13 +363,15 @@
     <!-- Problem selector bar -->
     <div id="problem-bar">
         <label for="problem">Бодлогоо сонгоно уу:</label>
-        <select id="problem"></select>
-        {% if current_user.is_authenticated %}
+
+        <select id="problem" onchange="goToEditor(this.value)"></select>
+
+        <!-- {% if current_user.is_authenticated %}
         <p>Welcome, {{ current_user.email }}</p>
         <p>Your ID: {{ current_user.id }}</p>
         {% else %}
         <p>You are not logged in.</p>
-        {% endif %}
+        {% endif %} -->
     </div>
 
     <!-- Main container -->
@@ -250,24 +402,14 @@
             <!-- Results -->
             <div id="results-container">
                 <div id="traceback"></div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Оролт</th>
-                            <th>Зөв хариу</th>
-                            <th>Гаралт</th>
-                            <th>Хэвэлсэн</th>
-                            <th>Хариу</th>
-                            <th>Алдаа</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody"></tbody>
-                </table>
+                <div class="results-header">Testcase results</div>
+                <div id="results-list" class="results-list" aria-live="polite"></div>
             </div>
         </div>
     </div>
 
     <script>
+        const CURRENT_ID = {{ editor_id }};
 
         let editorPrefix = "";
         document.addEventListener('DOMContentLoaded', function () {
@@ -276,8 +418,9 @@
 
             dropdown.addEventListener('change', function () {
                 const selectedValue = dropdown.value;
+
                 refreshProblem(selectedValue);
-                console.log(selectedValue)
+                // window.location.href = "/editor/" + editor_id;
             });
         });
         // Configure Monaco
@@ -361,7 +504,7 @@
                 problemSelect.appendChild(opt);
             });
             if (problems.length > 0) {
-                problemSelect.value = problems[0].id;
+                problemSelect.value = CURRENT_ID;
                 refreshProblem(problems[0].id);
             }
         }
@@ -380,9 +523,11 @@
         }
 
         runButton.addEventListener("click", async () => {
+            // build tabbed results inside results-list (no page scroll changes)
             runButton.disabled = true;
             runButton.textContent = "Ажиллуулж байна...";
-            resultsBody.innerHTML = "";
+            const resultsList = document.getElementById("results-list");
+            if (resultsList) resultsList.innerHTML = "";
             tracebackDiv.style.display = "none";
             tracebackDiv.textContent = "";
 
@@ -391,6 +536,8 @@
 
             if (!problem_id) { alert("Please select a problem."); runButton.disabled = false; return; }
             if (!code) { alert("Please enter your code."); runButton.disabled = false; return; }
+
+            function escapeHtml(s) { if (s === null || s === undefined) return ''; return String(s).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>'); }
 
             try {
                 const submitRes = await fetch("/run", {
@@ -404,22 +551,59 @@
                 let results = await pollResult(submission_id);
                 if (!Array.isArray(results)) results = [results];
 
-                results.forEach(r => {
-                    const row = document.createElement("tr");
-                    if (r.verdict === "correct") row.className = "correct";
-                    else if (r.verdict === "wrong") row.className = "wrong";
-                    else row.className = "error";
+                // create tabs UI
+                const tabsWrap = document.createElement('div');
+                tabsWrap.className = 'results-tabs';
+                const buttonsWrap = document.createElement('div');
+                buttonsWrap.className = 'tab-buttons';
+                const contentArea = document.createElement('div');
+                contentArea.className = 'tab-content-area';
 
-                    row.innerHTML = `
-                        <td>${JSON.stringify(r.input)}</td>
-                        <td>${JSON.stringify(r.expected)}</td>
-                        <td>${JSON.stringify(r.output)}</td>
-                        <td>${r.printed || ""}</td>
-                        <td>${r.verdict}</td>
-                        <td><pre>${r.error || ""}</pre></td>
-                    `;
-                    resultsBody.appendChild(row);
+                results.forEach((r, idx) => {
+                    const tabId = 'tab-' + idx;
+
+                    const btn = document.createElement('button');
+                    // add status class (correct / wrong / error) so tabs can be highlighted
+                    const statusClass = r && r.verdict ? (r.verdict === 'correct' ? ' correct' : (r.verdict === 'wrong' ? ' wrong' : (r.verdict === 'error' ? ' error' : ''))) : '';
+                    btn.className = 'tab-button' + statusClass + (idx === 0 ? ' active' : '');
+                    btn.textContent = `Testcase ${idx + 1}`;
+                    btn.onclick = () => {
+                        // activate button
+                        buttonsWrap.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        // show content
+                        contentArea.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                        const el = contentArea.querySelector('#' + tabId);
+                        if (el) el.classList.add('active');
+                    };
+
+                    const content = document.createElement('div');
+                    content.className = 'tab-content' + (idx === 0 ? ' active' : '');
+                    content.id = tabId;
+
+                    // Build content: input + expected; show output only if no error
+                    let inner = '';
+                    inner += `<div class="io"><strong>Input:</strong> <pre>${escapeHtml(JSON.stringify(r.input))}</pre></div>`;
+                    inner += `<div class="io"><strong>Expected:</strong> <pre>${escapeHtml(JSON.stringify(r.expected))}</pre></div>`;
+                    if (!r.error) {
+                        inner += `<div class="io"><strong>Output:</strong> <pre>${escapeHtml(JSON.stringify(r.output))}</pre></div>`;
+                    }
+                    if (r.printed) inner += `<div class="io"><strong>Printed:</strong> <pre>${escapeHtml(r.printed)}</pre></div>`;
+                    if (r.error) inner += `<div class="io error-block"><strong>Error:</strong> <pre>${escapeHtml(r.error)}</pre></div>`;
+
+                    content.innerHTML = inner;
+
+                    buttonsWrap.appendChild(btn);
+                    contentArea.appendChild(content);
                 });
+
+                tabsWrap.appendChild(buttonsWrap);
+                tabsWrap.appendChild(contentArea);
+                if (resultsList) resultsList.appendChild(tabsWrap);
+
+                // ensure results content area is at top
+                if (contentArea) contentArea.scrollTop = 0;
+
             } catch (err) {
                 tracebackDiv.style.display = "block";
                 tracebackDiv.textContent = "Failed to run code: " + err;
@@ -428,6 +612,41 @@
                 runButton.textContent = "Ажиллуулах";
             }
         });
+
+        function goToEditor(editor_id) {
+            if (editor_id) {
+
+                window.location.href = "/editor/" + editor_id;
+
+            }
+        };
+
+        const select = document.getElementById("problem");
+
+        // fetch("/api/problems")
+        //     .then(res => res.json())
+        //     .then(problems => {
+
+        //         // 1️⃣ Clear existing options
+        //         select.innerHTML = "";
+
+        //         // 2️⃣ Create options
+        //         problems.forEach(problem => {
+        //             const option = document.createElement("option");
+        //             option.value = problem.id;
+        //             option.textContent = problem.title;
+
+        //             // 3️⃣ Apply selection AFTER creation
+        //             if (problem.id === CURRENT_PROBLEM_ID) {
+        //                 option.selected = true;
+        //             }
+
+        //             select.appendChild(option);
+        //         });
+
+        //     });
+
+
     </script>
 </body>
 
